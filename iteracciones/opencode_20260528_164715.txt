@@ -1,0 +1,130 @@
+================================================================================
+ARCHIVO: opencode_20260528_164715.txt
+FECHA: 2026-05-28 16:47:15
+CONTEXTO: Análisis de flujo Fase 1 -> Fase 2 y propuesta de arquitectura MVP
+================================================================================
+
+## 1. ANÁLISIS DEL FLUJO COMPLETO (Fase 1 -> Fase 2)
+
+### Flujo original Fase 1 (Mock API Express)
+
+1. LOGIN:
+   POST /api/v1/auth/login
+   Body: { email, password }
+   Response: { token, user_id, subscription: { status, max_images, expires } }
+
+2. VERIFICAR SUSCRIPCIÓN:
+   GET /api/v1/subscription/{userId}
+   Response: { status, max_images, expires }
+
+3. CREAR SESIÓN:
+   POST /api/v1/sessions
+   Body: { session_id: "SESSION_<timestamp>", user_id }
+   Response: { session_token, status: "OPEN" }
+   NOTA: El session_id lo genera el cliente (PWA) en el navegador.
+
+4. CAPTURAR FOTO:
+   - Video stream -> canvas -> toDataURL('image/jpeg', 0.85)
+   - Se guarda en IndexedDB (Dexie) como base64 con estado PENDING
+
+5. SINCRONIZAR / SUBIR:
+   - base64 -> Blob (image/jpeg)
+   - FormData con fields: image (Blob), session_id, timestamp
+   - POST /api/v1/upload (multipart/form-data, Bearer JWT)
+   - Response: { image_id, status: "RECEIVED" }
+   - Retry: max 3 intentos, backoff exponencial
+
+6. DESCARGAR .txt:
+   GET /api/v1/sessions/{id}/download
+   Response: Blob (archivo .txt formato Delphi 7)
+   - Formato: UTF-8 sin BOM, CRLF, delimitado por ;
+   - Secciones: [SESSION], [DATA], [END]
+   - Campos: A001;A;B;C;D;A;OK
+
+### Incompatibilidades detectadas en backend Fase 2 actual
+
+| Aspecto              | Fase 1 espera                    | Backend Fase 2 actual     | Impacto |
+|----------------------|----------------------------------|---------------------------|---------|
+| Login body           | { email, password }              | { username, password }    | CRITICO |
+| Login response       | { token, user_id, subscription } | { token, user_id, full_name } | CRITICO |
+| Subscription response| { status, max_images, expires } | { subscription_status }   | CRITICO |
+| Session body         | { session_id, user_id }          | { name, template_id }     | CRITICO |
+| Session response     | { session_token, status }        | Modelo completo UUID      | CRITICO |
+| Upload field name    | "image"                          | "file"                    | CRITICO |
+| Download .txt        | Formato Delphi 7                 | No implementado           | FALTA  |
+
+================================================================================
+
+## 2. PROPUESTA DE ARQUITECTURA MVP OPTIMIZADA
+
+### Flujo propuesto:
+
+PWA (Celular)                          Backend Fase 2
+─────────────                          ─────────────────
+
+1. LOGIN
+   POST /api/v1/auth/login ──────────→ Validar credenciales contra DB
+   ← { token, user_id, subscription }
+
+2. CREAR SESIÓN de trabajo
+   POST /api/v1/sessions ────────────→ Crea agrupación de capturas
+   ← { session_id, status: "OPEN" }
+
+3. CAPTURAR + SUBIR + PROCESAR (todo en 1 llamada)
+   POST /api/v1/upload (multipart) ──→
+     image: Blob (JPEG)
+     session_id: "..."
+                                      Recibe la imagen
+                                      Aplica CropOnMarkers (corregir perspectiva)
+                                      Ejecuta read_omr_response()
+                                      Evalúa contra respuestas correctas
+                                      Guarda resultado en PostgreSQL
+   ← { image_id, status: "success",
+       answers: { Q1: "A", Q2: "B", Q3: "D", ... },
+       score: 45, total: 60 }
+
+   ⋮ (se repite para cada cartilla)
+   La app muestra feedback inmediato al profesor
+
+4. FINALIZAR SESIÓN
+   POST /api/v1/sessions/{id}/finish ──→ Genera .txt (Delphi 7)
+                                          Envía email con .txt adjunto
+                                          Marca sesión COMPLETADA
+   ← { status: "completed", emailed: true,
+       txt_filename: "SESSION_xxx.txt" }
+
+5. DESCARGAR (opcional)
+   GET /api/v1/sessions/{id}/download
+   ← Archivo .txt (application/octet-stream)
+
+### Endpoints del MVP
+
+| Método | Ruta | Propósito | Request | Response |
+|--------|------|-----------|---------|----------|
+| POST   | /api/v1/auth/login | Login | { email, password } | { token, user_id, subscription } |
+| GET    | /api/v1/subscription/{id} | Verificar suscripción | - | { status, max_images, expires } |
+| POST   | /api/v1/sessions | Crear sesión | { name? } | { session_id, status } |
+| POST   | /api/v1/upload | Subir + procesar OMR | multipart: image, session_id | { image_id, status, answers, score, total } |
+| POST   | /api/v1/sessions/{id}/finish | Finalizar + email | - | { status, emailed, txt_filename } |
+| GET    | /api/v1/sessions/{id}/download | Descargar .txt | - | Archivo .txt |
+| GET    | /api/v1/health | Health check | - | { status, version } |
+
+### Ventajas de la propuesta
+
+1. SUBIDA + PROCESO en 1 solo paso: la app recibe feedback inmediato
+2. SIN Celery para MVP: procesamiento síncrono (simplicidad)
+3. SESIONES gestionadas por backend: IDs consistentes (UUID)
+4. EMAIL automático al finalizar: el profesor no necesita descargar manual
+5. Compatibilidad con Fase 1: mismos endpoint paths, mismo formato de respuesta
+
+### Tecnología
+
+- FastAPI + SQLAlchemy async + PostgreSQL
+- OpenCV para procesamiento OMR (CropOnMarkers + read_omr_response)
+- Jinja2 para formateo del .txt
+- SMTP (configurable) para envío de email
+- Docker Compose para entorno completo
+
+================================================================================
+FIN DEL ARCHIVO
+================================================================================
