@@ -1,43 +1,69 @@
+import os
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.schemas.scan import UploadResponse
+from app.config import settings
+from app.schemas.upload import UploadResponse
 from app.routes.dependencies import get_current_user
-from app.services.session_service import add_image_to_session, get_session
+from app.services.session_service import add_image_result, get_session
+from app.services.omr_service import process_single_image_sync
+from app.services.template_service import get_template_by_name
 
 router = APIRouter()
 
 
 @router.post("/upload", response_model=UploadResponse)
-async def upload_image(
+async def upload_and_process(
     session_id: str = Form(...),
-    file: UploadFile = File(...),
+    image: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user),
 ):
-    import uuid
-    import os
-    from app.config import settings
-
     session_obj = await get_session(db, uuid.UUID(session_id))
     if not session_obj:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    if not image.content_type or not image.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Invalid image format")
+
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-    file_ext = os.path.splitext(file.filename)[1] or ".jpg"
+    file_ext = os.path.splitext(image.filename or "capture.jpg")[1] or ".jpg"
     unique_name = f"{uuid.uuid4()}{file_ext}"
     file_path = os.path.join(settings.UPLOAD_DIR, unique_name)
 
-    content = await file.read()
+    content = await image.read()
     with open(file_path, "wb") as f:
         f.write(content)
 
-    image = await add_image_to_session(db, uuid.UUID(session_id), file.filename, file_path)
+    template = await get_template_by_name(db, "imax_evaluacion")
+    if not template:
+        result_data = {"status": "error", "error_message": "Default template not configured"}
+    else:
+        result_data = await process_single_image_sync(
+            db, uuid.UUID(session_id), image.filename, file_path, template.id
+        )
+
+    img_record = await add_image_result(
+        db,
+        session_id=uuid.UUID(session_id),
+        filename=image.filename,
+        original_path=file_path,
+        answers=result_data.get("answers"),
+        score=result_data.get("score"),
+        total_questions=result_data.get("total"),
+        verdicts=result_data.get("verdicts"),
+        error_message=result_data.get("error_message"),
+        sequenced_id=f"A{session_obj.total_images + 1:03d}",
+    )
 
     return UploadResponse(
-        image_id=str(image.id),
-        session_id=session_id,
-        filename=file.filename,
-        status=image.status,
+        image_id=str(img_record.id),
+        status=result_data.get("status", "error"),
+        answers=result_data.get("answers"),
+        score=result_data.get("score"),
+        total=result_data.get("total"),
+        error_message=result_data.get("error_message"),
     )

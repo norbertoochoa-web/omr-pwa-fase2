@@ -17,11 +17,11 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-def create_token(user_id: uuid.UUID, username: str) -> str:
+def create_token(user_id: uuid.UUID, email: str) -> str:
     expire = datetime.datetime.utcnow() + datetime.timedelta(hours=settings.JWT_EXPIRATION_HOURS)
     payload = {
         "user_id": str(user_id),
-        "username": username,
+        "email": email,
         "exp": expire,
         "iat": datetime.datetime.utcnow(),
     }
@@ -36,9 +36,9 @@ def decode_token(token: str) -> dict | None:
         return None
 
 
-async def authenticate_user(username: str, password: str, db) -> User | None:
+async def authenticate_user(email: str, password: str, db) -> User | None:
     from sqlalchemy import select
-    result = await db.execute(select(User).where(User.username == username))
+    result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if not user or not verify_password(password, user.password_hash):
         return None

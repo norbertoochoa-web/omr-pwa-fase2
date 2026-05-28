@@ -1,12 +1,10 @@
 import asyncio
 import uuid
-from passlib.context import CryptContext
+import datetime
 
 from app.database import async_session_factory, init_db
 from app.models import User, Template
 from app.services.auth_service import hash_password
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 IMAX_TEMPLATE_DATA = {
     "pageDimensions": [1600, 2300],
@@ -37,8 +35,7 @@ IMAX_EVALUATION_DATA = {
         "should_explain_scoring": True,
         "questions_in_order": [f"Q{i}" for i in range(1, 61)],
         "answers_in_order": (
-            ["A", "B", "C", "D", "E"] +
-            ["A"] * 55
+            ["A", "B", "C", "D", "E"] + ["A"] * 55
         ),
     },
     "marking_schemes": {
@@ -67,28 +64,32 @@ IMAX_CONFIG = {
 async def seed():
     await init_db()
     async with async_session_factory() as db:
-        existing_user = await db.get(User, uuid.UUID("00000000-0000-0000-0000-000000000001"))
-        if not existing_user:
+        existing_admin = await db.get(User, uuid.UUID("00000000-0000-0000-0000-000000000001"))
+        if not existing_admin:
             admin = User(
                 id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
-                username="admin",
-                password_hash=hash_password("admin123"),
+                email="admin@test.com",
+                password_hash=hash_password("password123"),
                 full_name="Administrador",
                 subscription_status="ACTIVE",
+                max_images=100,
+                expires=datetime.datetime.utcnow() + datetime.timedelta(days=365),
                 is_active=True,
             )
             db.add(admin)
 
             inactive = User(
                 id=uuid.UUID("00000000-0000-0000-0000-000000000002"),
-                username="inactive_user",
+                email="inactive@test.com",
                 password_hash=hash_password("inactive123"),
                 full_name="Usuario Inactivo",
                 subscription_status="EXPIRED",
+                max_images=0,
+                expires=datetime.datetime.utcnow() - datetime.timedelta(days=30),
                 is_active=False,
             )
             db.add(inactive)
-            print("Users seeded.")
+            print("Users seeded: admin@test.com / password123")
 
         existing_template = await db.get(Template, uuid.UUID("00000000-0000-0000-0000-000000000010"))
         if not existing_template:

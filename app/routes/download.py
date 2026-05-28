@@ -22,11 +22,17 @@ async def download_session_txt(
     if not session_obj:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    if not session_obj.result_txt_path or not os.path.exists(session_obj.result_txt_path):
-        raise HTTPException(status_code=404, detail="Result file not available yet")
+    if session_obj.result_txt_path and os.path.exists(session_obj.result_txt_path):
+        file_path = session_obj.result_txt_path
+    else:
+        from app.services.txt_service import generate_delphi_txt, save_txt_to_file
+        from app.config import settings
+        txt_content = generate_delphi_txt(session_obj)
+        file_path = save_txt_to_file(txt_content, settings.UPLOAD_DIR, str(session_obj.id))
+        session_obj.result_txt_path = file_path
 
     return FileResponse(
-        session_obj.result_txt_path,
-        filename=f"session_{session_id}_results.txt",
-        media_type="text/plain",
+        file_path,
+        filename=f"{session_obj.id}.txt",
+        media_type="application/octet-stream",
     )

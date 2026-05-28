@@ -23,6 +23,22 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "uploads"
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024
 
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_TLS: bool = True
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = "omr@imax.cl"
+
+    DEFAULT_ANSWERS_IN_ORDER: list[str] = [
+        "A", "B", "C", "D", "E", "A", "A", "A", "A", "A",
+        "A", "A", "A", "A", "A", "A", "A", "A", "A", "A",
+        "A", "A", "A", "A", "A", "A", "A", "A", "A", "A",
+        "A", "A", "A", "A", "A", "A", "A", "A", "A", "A",
+        "A", "A", "A", "A", "A", "A", "A", "A", "A", "A",
+        "A", "A", "A", "A", "A", "A", "A", "A", "A", "A",
+    ]
+
     API_V1_PREFIX: str = "/api/v1"
 
     @property

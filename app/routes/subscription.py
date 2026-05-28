@@ -11,14 +11,25 @@ router = APIRouter()
 
 
 @router.get("/subscription/{user_id}", response_model=SubscriptionResponse)
-async def get_subscription(user_id: str, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.id == user_id))
+async def get_subscription(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user_id: str = Depends(get_current_user),
+):
+    import uuid
+
+    if user_id != current_user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    expires_str = user.expires.isoformat() if user.expires else None
+
     return SubscriptionResponse(
-        user_id=user.id,
-        subscription_status=user.subscription_status,
-        is_active=user.subscription_status == "ACTIVE" and user.is_active,
+        status=user.subscription_status,
+        max_images=user.max_images,
+        expires=expires_str,
     )

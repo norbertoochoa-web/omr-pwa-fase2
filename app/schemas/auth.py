@@ -1,33 +1,26 @@
 import uuid
 import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class LoginRequest(BaseModel):
-    username: str
+    email: str
     password: str
+
+
+class SubscriptionObject(BaseModel):
+    status: str
+    max_images: int
+    expires: str | None = None
 
 
 class LoginResponse(BaseModel):
     token: str
     user_id: str
-    username: str
-    full_name: str
-    subscription_status: str
-
-
-class UserResponse(BaseModel):
-    id: uuid.UUID
-    username: str
-    full_name: str | None
-    subscription_status: str
-    is_active: bool
-
-    class Config:
-        from_attributes = True
+    subscription: SubscriptionObject
 
 
 class TokenData(BaseModel):
     user_id: str
-    username: str
+    email: str
     exp: datetime.datetime

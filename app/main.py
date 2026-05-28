@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import init_db
-from app.routes import auth, subscription, sessions, upload, download, scan, health, templates
+from app.routes import auth, subscription, sessions, upload, download, health
 
 
 @asynccontextmanager
@@ -40,5 +40,3 @@ app.include_router(subscription.router, prefix=api_prefix, tags=["Subscription"]
 app.include_router(sessions.router, prefix=api_prefix, tags=["Sessions"])
 app.include_router(upload.router, prefix=api_prefix, tags=["Upload"])
 app.include_router(download.router, prefix=api_prefix, tags=["Download"])
-app.include_router(scan.router, prefix=api_prefix, tags=["OMR Scan"])
-app.include_router(templates.router, prefix=api_prefix, tags=["Templates"])

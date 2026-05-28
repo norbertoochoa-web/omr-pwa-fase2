@@ -1,4 +1,3 @@
-import uuid
 from pydantic import BaseModel
 
 
@@ -15,17 +14,6 @@ class TemplateCreate(BaseModel):
 
 
 class TemplateResponse(BaseModel):
-    id: uuid.UUID
+    id: str
     name: str
     description: str | None
-    page_width: int
-    page_height: int
-
-    class Config:
-        from_attributes = True
-
-
-class TemplateDetailResponse(TemplateResponse):
-    config: dict
-    template_data: dict
-    evaluation_data: dict | None

@@ -14,7 +14,8 @@ async def get_current_user(
     if not authorization:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing authorization header",
+            detail="No token provided",
+            headers={"X-Error-Code": "NO_TOKEN"},
         )
 
     token = authorization.replace("Bearer ", "")
@@ -23,7 +24,8 @@ async def get_current_user(
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
+            detail="Invalid token",
+            headers={"X-Error-Code": "INVALID_TOKEN"},
         )
 
     result = await db.execute(select(User).where(User.id == payload["user_id"]))
@@ -32,6 +34,13 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or inactive",
+        )
+
+    if user.subscription_status != "ACTIVE":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Subscription not active",
+            headers={"X-Error-Code": "SUBSCRIPTION_INACTIVE"},
         )
 
     return payload["user_id"]
