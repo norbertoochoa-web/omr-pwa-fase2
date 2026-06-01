@@ -96,8 +96,9 @@ async def finish_session_endpoint(
 
     txt_content = generate_delphi_txt(session_obj)
     inst_dir = session_obj.institution_id or "default"
-    output_dir = os.path.join(settings.OUTPUTS_DIR, inst_dir)
-    txt_path = save_txt_to_file(txt_content, output_dir, str(session_obj.id))
+    session_dir = os.path.join(settings.OUTPUTS_DIR, inst_dir, session_id)
+    os.makedirs(session_dir, exist_ok=True)
+    txt_path = save_txt_to_file(txt_content, session_dir, str(session_obj.id))
     session_obj.result_txt_path = txt_path
 
     emailed = False

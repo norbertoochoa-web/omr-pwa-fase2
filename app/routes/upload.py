@@ -1,4 +1,5 @@
 import os
+import shutil
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
@@ -47,7 +48,11 @@ async def upload_and_process(
         if not session_obj.institution_id and template.institution_id:
             session_obj.institution_id = template.institution_id
         inst_dir = session_obj.institution_id or "default"
-        marked_path = os.path.join(settings.OUTPUTS_DIR, inst_dir, f"{img_id}_marked.jpg")
+        session_dir = os.path.join(settings.OUTPUTS_DIR, inst_dir, session_id)
+        os.makedirs(session_dir, exist_ok=True)
+        marked_path = os.path.join(session_dir, f"{img_id}_marked.jpg")
+        original_path = os.path.join(session_dir, f"{img_id}_original{file_ext}")
+        shutil.copy2(file_path, original_path)
         result_data = await process_single_image_sync(
             db, uuid.UUID(session_id), image.filename, file_path, template.id,
             marked_path=marked_path,
