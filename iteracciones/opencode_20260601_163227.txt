@@ -1,0 +1,69 @@
+## RESUMEN SESIÓN - 01 JUNIO 2026 (4ta parte)
+
+### Proyecto: omr-pwa-fase2 (FastAPI + PostgreSQL + Docker)
+
+### 1. Fix crítico: CropOnMarkers marker preprocessing
+- **Problema:** El `set_marker_image()` en `crop_on_markers.py` recibía el marker sin procesar, a diferencia del BACKEND original que aplicaba GaussianBlur, normalize y erode_subtract antes de template matching.
+- **Síntomas:** Multi-marcas en las lecturas (Q1=BC, Q2=AE), detección imprecisa.
+- **Fix:** `set_marker_image()` ahora replica `load_marker()` del BACKEND original:
+  1. Resize por `sheetToMarkerWidthRatio`
+  2. `GaussianBlur` con kernel (5,5)
+  3. `normalize` con NORM_MINMAX
+  4. `erode_subtract` (marker -= erode(marker))
+- **Resultado:** Lecturas pasaron de `BC/AE` a `A/B/C/D/E` individuales.
+
+### 2. Organización de outputs por sesión
+- `outputs/{institution_id}/{session_id}/` contiene:
+  - `{session_id}.txt` — resultado TXT Delphi 7
+  - `{image_id}_marked.jpg` — imagen procesada con detecciones dibujadas
+  - `{image_id}_original.jpeg` — copia de la imagen original subida
+
+### 3. Tests
+- **10/10 pruebas pasan** con cartilla_6.jpeg y cartilla_rabba.jpeg
+- Lecturas limpias: Q1=A, Q2=B, Q3=C ... sin multi-marcas
+- ERR_BLANK persiste al final (posible offset, está en los pendientes)
+
+### 4. Estructura del proyecto
+```
+app/
+├── omr_engine/processors/crop_on_markers.py   ← fix marker preprocessing
+├── routes/
+│   ├── upload.py          ← guarda original + marcada en session folder
+│   ├── sessions.py        ← TXT en session folder
+│   ├── download.py        ← lee desde session folder
+│   └── templates.py       ← CRUD templates (POST/GET)
+├── models/__init__.py     ← institution_id en Template y Session
+├── services/
+│   ├── template_service.py
+│   ├── session_service.py
+│   └── omr_service.py     ← marked_path parameter
+├── schemas/template.py    ← TemplateCreate, TemplateResponse
+└── seed.py                ← carga desde data/catolico/
+
+data/catolico/             ← config y cartillas de prueba
+outputs/catolico/          ← resultados organizados por sesión
+iteracciones/              ← resúmenes de sesiones
+```
+
+### 5. Pendientes
+- [ ] Modificar `upload.py` para aceptar `template_name` o `template_id` (hoy hardcodea `"imax_evaluacion"`)
+- [ ] Agregar endpoint para subir marker image asociado a template
+- [ ] Investigar ERR_BLANK en última pregunta (posible offset en fieldBlocks)
+- [ ] Agregar cron de limpieza para imágenes con más de N días
+- [ ] Agregar volumen `outputs_data` en docker-compose para producción
+
+### 6. Comandos
+```bash
+cd /home/rodrigo/Workspace/Imax/Mobil_web/omr-pwa-fase2
+
+# Iniciar (resetea BD completa)
+echo "manager" | sudo -S docker compose down -v \
+  && echo "manager" | sudo -S docker compose up -d --build
+
+# Tests
+bash test_api.sh data/catolico/cartilla_6.jpeg
+
+# Ver resultados
+ls -la outputs/catolico/*/
+cat outputs/catolico/*/*.txt
+```
