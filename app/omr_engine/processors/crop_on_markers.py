@@ -40,7 +40,37 @@ class CropOnMarkers(ImagePreprocessor):
         self.marker = None
 
     def set_marker_image(self, marker_image: np.ndarray):
-        self.marker = marker_image
+        marker = marker_image
+        marker_ops = self.options
+        config = self.tuning_config
+
+        if "sheetToMarkerWidthRatio" in marker_ops:
+            marker = ImageUtils.resize_util(
+                marker,
+                config.dimensions.processing_width
+                / int(marker_ops["sheetToMarkerWidthRatio"]),
+            )
+
+        marker = cv2.GaussianBlur(
+            marker,
+            DEFAULT_GAUSSIAN_BLUR_PARAMS_MARKER["kernel_size"],
+            DEFAULT_GAUSSIAN_BLUR_PARAMS_MARKER["sigma_x"],
+        )
+        marker = cv2.normalize(
+            marker, None,
+            alpha=DEFAULT_NORMALIZE_PARAMS["alpha"],
+            beta=DEFAULT_NORMALIZE_PARAMS["beta"],
+            norm_type=cv2.NORM_MINMAX,
+        )
+
+        if self.apply_erode_subtract:
+            marker -= cv2.erode(
+                marker,
+                kernel=np.ones(EROSION_PARAMS["kernel_size"]),
+                iterations=EROSION_PARAMS["iterations"],
+            )
+
+        self.marker = marker
 
     def exclude_files(self):
         return [self.marker_path]
