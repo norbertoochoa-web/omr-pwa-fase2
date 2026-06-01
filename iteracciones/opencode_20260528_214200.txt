@@ -1,0 +1,49 @@
+## RECOMENDACIÓN: ESTRUCTURA PARA INSTITUCIONES + EVALUACIÓN
+
+### Contexto
+- Software SaaS por membresía, multi-institucion.
+- Cada colegio/institución tiene su propia cartilla OMR (template + evaluation + config + marker).
+- Actualmente el template está hardcodeado en `seed.py` y el marker en la raíz `omr_marker.jpg`.
+- Los archivos de evaluación están fuera del proyecto en `/home/rodrigo/Workspace/Imax/BACKEND/inputs/Imax/evaluacion/`.
+
+### Estructura propuesta dentro del proyecto
+
+```
+omr-pwa-fase2/
+├── data/                          # ← NUEVO: datos por institución
+│   ├── default/                   # Template por defecto (seed + dev)
+│   │   ├── template.json
+│   │   ├── evaluation.json
+│   │   ├── config.json
+│   │   └── omr_marker.jpg
+│   └── prueba_colegio_x/          # En producción: una carpeta por institución
+│       ├── template.json
+│       ├── evaluation.json
+│       ├── config.json
+│       └── omr_marker.jpg
+├── uploads/                       # Imágenes subidas (ya existe)
+│   └── {institucion}/
+│       └── {sesion}/
+└── app/
+    └── seed.py                    # Modificar para leer desde data/default/
+```
+
+### Cambios necesarios
+
+1. **Seed desde archivos** — Que `seed.py` lea `data/default/template.json`, `evaluation.json` y `config.json` en vez de tener datos hardcodeados. Más mantenible.
+
+2. **Modelo Template con institution_id** — Agregar columna `institution_id` (o `client_id`) a la tabla `templates` para asociar cada template a una institución.
+
+3. **Endpoint CRUD de templates** — `POST /api/v1/templates` para subir template + evaluation + marker por institución. Así cada colegio se configura vía API sin tocar código.
+
+4. **Uploads por institución** — En producción, las imágenes subidas se organizan como `uploads/{institution_id}/{session_id}/`.
+
+5. **Test con data local** — El test (test 6) falla porque no detecta marcas de esquina en cartilla4.jpeg. Tener `data/default/` permite debuggear el OMR engine con los mismos archivos que usa seed.
+
+### Para la prueba ahora
+
+Opciones inmediatas:
+- a) Crear `data/` y mover los archivos de evaluación al proyecto.
+- b) Modificar `seed.py` para leer desde `data/default/`.
+- c) Agregar endpoint para subir templates por institución.
+- d) Las 3 anteriores.

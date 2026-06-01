@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -80,16 +82,22 @@ async def finish_session_endpoint(
 ):
     import uuid
     from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
     from app.models import User
 
-    session_obj = await get_session(db, uuid.UUID(session_id))
+    result = await db.execute(
+        select(SessionModel).where(SessionModel.id == uuid.UUID(session_id)).options(selectinload(SessionModel.images))
+    )
+    session_obj = result.scalar_one_or_none()
     if not session_obj:
         raise HTTPException(status_code=404, detail="Session not found")
 
     await finish_session(db, uuid.UUID(session_id))
 
     txt_content = generate_delphi_txt(session_obj)
-    txt_path = save_txt_to_file(txt_content, settings.UPLOAD_DIR, str(session_obj.id))
+    inst_dir = session_obj.institution_id or "default"
+    output_dir = os.path.join(settings.OUTPUTS_DIR, inst_dir)
+    txt_path = save_txt_to_file(txt_content, output_dir, str(session_obj.id))
     session_obj.result_txt_path = txt_path
 
     emailed = False

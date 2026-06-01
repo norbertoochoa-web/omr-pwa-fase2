@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.database import get_db
+from app.models import Session as SessionModel
 from app.routes.dependencies import get_current_user
-from app.services.session_service import get_session
 
 router = APIRouter()
 
@@ -17,8 +18,12 @@ async def download_session_txt(
 ):
     import uuid
     import os
+    from sqlalchemy import select
 
-    session_obj = await get_session(db, uuid.UUID(session_id))
+    result = await db.execute(
+        select(SessionModel).where(SessionModel.id == uuid.UUID(session_id)).options(selectinload(SessionModel.images))
+    )
+    session_obj = result.scalar_one_or_none()
     if not session_obj:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -28,7 +33,9 @@ async def download_session_txt(
         from app.services.txt_service import generate_delphi_txt, save_txt_to_file
         from app.config import settings
         txt_content = generate_delphi_txt(session_obj)
-        file_path = save_txt_to_file(txt_content, settings.UPLOAD_DIR, str(session_obj.id))
+        inst_dir = session_obj.institution_id or "default"
+        output_dir = os.path.join(settings.OUTPUTS_DIR, inst_dir)
+        file_path = save_txt_to_file(txt_content, output_dir, str(session_obj.id))
         session_obj.result_txt_path = file_path
 
     return FileResponse(

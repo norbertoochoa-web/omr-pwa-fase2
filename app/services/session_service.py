@@ -35,6 +35,7 @@ async def add_image_result(
     session_id: uuid.UUID,
     filename: str,
     original_path: str,
+    image_id: uuid.UUID | None = None,
     answers: dict | None = None,
     score: float | None = None,
     total_questions: int | None = None,
@@ -47,6 +48,7 @@ async def add_image_result(
         raise ValueError("Session not found")
 
     image = Image(
+        id=image_id or uuid.uuid4(),
         session_id=session_id,
         filename=filename,
         original_path=original_path,

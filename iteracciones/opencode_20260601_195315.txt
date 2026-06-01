@@ -1,0 +1,59 @@
+## RESUMEN SESIÓN - 01 JUNIO 2026 (3ra parte)
+
+### Proyecto: omr-pwa-fase2 (FastAPI + PostgreSQL + Docker)
+
+### 1. Imagen marcada guardada en outputs/{institution_id}/
+- Al procesar una imagen, ahora se guarda también la **imagen con detecciones dibujadas** (esquinas, burbujas, valores leídos).
+- Archivo: `outputs/{institution_id}/{image_id}_marked.jpg`
+- El TXT de la sesión se guarda en el mismo directorio: `outputs/{institution_id}/{session_id}.txt`
+
+### Cambios realizados
+
+| Archivo | Cambio |
+|---------|--------|
+| `app/services/omr_service.py` | Nuevo parámetro `marked_path` en `process_single_image_sync`; guarda `final_marked_img` con `cv2.imwrite` |
+| `app/routes/upload.py` | Genera `img_id` antes de procesar, calcula `marked_path` y lo pasa al servicio; pasa `image_id` a `add_image_result` |
+| `app/services/session_service.py` | `add_image_result` acepta `image_id` opcional para usar el mismo UUID de la imagen marcada |
+
+### 2. Estructura actual de outputs/
+```
+outputs/catolico/
+├── 52c6088a-..._marked.jpg    ← imagen con detecciones dibujadas (640KB)
+├── f8e50065-..._marked.jpg    ← imagen con detecciones dibujadas (640KB)
+├── 2f521074-....txt           ← TXT sesión 1
+├── 57611f30-....txt           ← TXT sesión 2
+├── 5eb954ba-....txt           ← TXT sesión 3
+├── 7620c97a-....txt           ← TXT sesión 2 cartillas
+├── 7c4bdb67-....txt           ← TXT sesión 4
+└── fc3eaf34-....txt           ← TXT sesión 5
+```
+
+### 3. Tests
+- **10/10 pruebas pasan** con cartilla_rabba.jpeg
+- Flujo completo: crear sesión → subir imagen → procesar OMR → guardar TXT + imagen marcada → finalizar → descargar
+
+### 4. Pendientes
+- [ ] Modificar `upload.py` para aceptar `template_name` o `template_id` (hoy hardcodea `"imax_evaluacion"`)
+- [ ] Agregar endpoint para subir marker image asociado a template
+- [ ] Investigar `ERR_BLANK` en última pregunta (posible offset)
+- [ ] Migrar a S3/Cloud Storage para producción (multi-instancia)
+- [ ] Agregar cron de limpieza para imágenes con más de N días
+- [ ] Agregar volumen `outputs_data` en docker-compose para producción
+
+### 5. Comandos
+```bash
+cd /home/rodrigo/Workspace/Imax/Mobil_web/omr-pwa-fase2
+
+# Iniciar (resetea BD)
+echo "manager" | sudo -S docker compose down -v \
+  && echo "manager" | sudo -S docker compose up -d --build
+
+# Tests
+bash test_api.sh data/catolico/cartilla_rabba.jpeg
+
+# Ver imagen marcada
+ls -lh outputs/catolico/*_marked.jpg
+
+# Ver TXT
+cat outputs/catolico/*.txt
+```

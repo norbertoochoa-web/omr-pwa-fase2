@@ -17,6 +17,7 @@ async def process_single_image_sync(
     filename: str,
     image_path: str,
     template_id: uuid.UUID,
+    marked_path: str | None = None,
 ) -> dict:
     result = await db.execute(select(Template).where(Template.id == template_id))
     template_record = result.scalar_one_or_none()
@@ -48,7 +49,11 @@ async def process_single_image_sync(
             "error_message": "No se detectaron las marcas de esquina. Por favor, reencuadre la foto y asegúrese de que se visualicen los 4 extremos de la cartilla.",
         }
 
-    response_dict, _final_marked_img, _multi_marked = result_data
+    response_dict, final_marked_img, _multi_marked = result_data
+
+    if marked_path and final_marked_img is not None:
+        os.makedirs(os.path.dirname(marked_path), exist_ok=True)
+        cv2.imwrite(marked_path, final_marked_img)
 
     score = None
     verdicts = None

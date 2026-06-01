@@ -1,0 +1,106 @@
+================================================================================
+ARCHIVO: opencode_20260528_165300.txt
+FECHA: 2026-05-28 16:53:00
+CONTEXTO: Resumen final de la reestructuración del backend MVP Fase 2
+================================================================================
+
+## 1. REPOSITORIO GITHUB
+
+URL: https://github.com/norbertoochoa-web/omr-pwa-fase2
+Rama: main
+
+## 2. ESTRUCTURA DEL PROYECTO
+
+omr-pwa-fase2/
+├── docker-compose.yml          # PostgreSQL + API
+├── Dockerfile
+├── requirements.txt
+├── .env
+├── omr_marker.jpg              # Marcador para CropOnMarkers
+├── start.sh
+├── iteracciones/               # Historial de respuestas
+│   ├── opencode_20260528_164715.txt   # Análisis flujo
+│   └── opencode_20260528_165300.txt   # Este archivo
+└── app/
+    ├── main.py                 # FastAPI app
+    ├── config.py               # Settings (DB, JWT, SMTP)
+    ├── database.py             # SQLAlchemy async + PostgreSQL
+    ├── seed.py                 # Seed: admin@test.com / password123
+    ├── models/
+    │   └── __init__.py         # User, Session, Image, Template
+    ├── schemas/
+    │   ├── auth.py             # { email, password } -> { token, user_id, subscription }
+    │   ├── subscription.py     # { status, max_images, expires }
+    │   ├── session.py          # { session_token, status } + FinishSessionResponse
+    │   └── upload.py           # { image_id, status, answers, score, total }
+    ├── routes/
+    │   ├── auth.py             # POST /api/v1/auth/login
+    │   ├── subscription.py     # GET /api/v1/subscription/{id}
+    │   ├── sessions.py         # CRUD sessions + POST /finish
+    │   ├── upload.py           # POST /api/v1/upload (OMR inline)
+    │   ├── download.py         # GET /api/v1/sessions/{id}/download
+    │   ├── health.py           # GET /api/v1/health
+    │   └── dependencies.py     # JWT validation middleware
+    ├── services/
+    │   ├── auth_service.py     # JWT create/decode + bcrypt
+    │   ├── session_service.py  # Session + Image CRUD
+    │   ├── omr_service.py      # OMR processing síncrono
+    │   ├── template_service.py # Template lookup by name
+    │   ├── txt_service.py      # Generación .txt Delphi 7
+    │   └── email_service.py    # Envío SMTP (opcional)
+    └── omr_engine/             # Motor OMR (adaptado de OMRChecker)
+        ├── core.py             # ImageInstanceOps (read_omr_response)
+        ├── template.py         # Template, FieldBlock, Bubble
+        ├── evaluation.py       # EvaluationEngine
+        ├── processor.py        # OMRProcessor (orquestador)
+        ├── image_utils.py      # OpenCV utilities
+        ├── constants.py        # FIELD_TYPES, colores
+        ├── defaults.py         # Config defaults
+        └── processors/
+            ├── crop_on_markers.py    # CropOnMarkers
+            └── interfaces/ImagePreprocessor.py
+
+## 3. ENDPOINTS DISPONIBLES
+
+| Método | Ruta | Request | Response |
+|--------|------|---------|----------|
+| POST   | /api/v1/auth/login | { email, password } | { token, user_id, subscription } |
+| GET    | /api/v1/subscription/{id} | Bearer token | { status, max_images, expires } |
+| POST   | /api/v1/sessions | { name? } | { session_token, status: "OPEN" } |
+| GET    | /api/v1/sessions | - | Lista de sesiones del usuario |
+| GET    | /api/v1/sessions/{id} | - | Detalle de sesión |
+| POST   | /api/v1/upload | multipart: image, session_id | { image_id, status, answers, score, total } |
+| POST   | /api/v1/sessions/{id}/finish | - | { status: "COMPLETED", emailed, txt_filename } |
+| GET    | /api/v1/sessions/{id}/download | - | Archivo .txt Delphi 7 |
+| GET    | /api/v1/health | - | { status: "healthy", version: "2.0.0" } |
+
+## 4. FLUJO MVP
+
+1. LOGIN: app -> { email, password } -> backend valida -> { token, subscription }
+2. CREAR SESIÓN: app -> {} -> backend -> { session_token }
+3. CAPTURAR + SUBIR: app captura foto -> blob -> POST /upload (multipart)
+   Backend: CropOnMarkers (enderezar) -> read_omr_response (leer burbujas)
+            -> EvaluationEngine (puntuar) -> guarda en DB
+   Response: { answers: { Q1: "A", Q2: "B", ... }, score: 45, total: 60 }
+4. FINALIZAR: app -> POST /sessions/{id}/finish
+   Backend: genera .txt (Delphi 7), envía email (opcional)
+5. DESCARGAR: app -> GET /sessions/{id}/download -> .txt
+
+## 5. COMPATIBILIDAD CON FASE 1
+
+- Login: acepta email (como Fase 1), devuelve subscription object
+- Sessions: ID generado por backend (UUID), no SESSION_<timestamp>
+  -> Requiere cambio menor en frontend Fase 1 para adaptarse
+- Upload: field name = "image" (igual que Fase 1)
+- Download: mismo formato .txt Delphi 7
+
+## 6. PARA INICIAR
+
+docker compose up --build -d
+# API: http://localhost:8000
+# Docs: http://localhost:8000/docs
+# Usuario: admin@test.com / password123
+
+================================================================================
+FIN DEL ARCHIVO
+================================================================================

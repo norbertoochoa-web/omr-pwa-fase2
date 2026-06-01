@@ -1,0 +1,207 @@
+================================================================================
+ARCHIVO: opencode_20260528_170336.txt
+FECHA: 2026-05-28 17:03:36
+CONTEXTO: Instrucciones de prueba, script de test y conexión DBeaver
+================================================================================
+
+## 1. LEVANTAR SERVICIOS
+
+```bash
+cd /home/rodrigo/Workspace/Imax/Mobil_web/omr-pwa-fase2
+docker compose up --build -d
+```
+
+Esto levanta:
+- PostgreSQL en puerto 5432
+- API en puerto 8000
+- Docs: http://localhost:8000/docs
+
+## 2. PROBAR ENDPOINTS
+
+### 2.1 Login
+
+```bash
+curl -s -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "admin@test.com", "password": "password123"}' | python3 -m json.tool
+```
+
+Respuesta esperada:
+```json
+{
+    "token": "eyJ...",
+    "user_id": "00000000-0000-0000-0000-000000000001",
+    "subscription": {
+        "status": "ACTIVE",
+        "max_images": 100,
+        "expires": "2027-05-28T..."
+    }
+}
+```
+
+Guardar TOKEN:
+```bash
+TOKEN="eyJ..."
+```
+
+### 2.2 Verificar suscripción
+
+```bash
+curl -s http://localhost:8000/api/v1/subscription/00000000-0000-0000-0000-000000000001 \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+```
+
+### 2.3 Crear sesión
+
+```bash
+curl -s -X POST http://localhost:8000/api/v1/sessions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"name": "Prueba 1"}' | python3 -m json.tool
+```
+
+Respuesta:
+```json
+{
+    "session_token": "uuid-de-la-sesion",
+    "status": "OPEN"
+}
+```
+
+Guardar SESSION:
+```bash
+SESSION="uuid-de-la-sesion"
+```
+
+### 2.4 Subir imagen + procesar OMR
+
+```bash
+curl -s -X POST http://localhost:8000/api/v1/upload \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "image=@/home/rodrigo/Workspace/Imax/BACKEND/inputs/Imax/evaluacion/cartilla4.jpeg" \
+  -F "session_id=$SESSION" | python3 -m json.tool
+```
+
+Respuesta esperada:
+```json
+{
+    "image_id": "uuid",
+    "status": "success",
+    "answers": { "Q1": "A", "Q2": "B", ... },
+    "score": 45.0,
+    "total": 60
+}
+```
+
+### 2.5 Finalizar sesión
+
+```bash
+curl -s -X POST http://localhost:8000/api/v1/sessions/$SESSION/finish \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+```
+
+### 2.6 Descargar .txt
+
+```bash
+curl -s -o resultados.txt \
+  http://localhost:8000/api/v1/sessions/$SESSION/download \
+  -H "Authorization: Bearer $TOKEN"
+
+cat resultados.txt
+```
+
+## 3. ERRORES ESPERADOS
+
+### Error de autenticación
+```bash
+curl -s -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"wrong@test.com","password":"bad"}' | python3 -m json.tool
+```
+
+### Error de imagen sin marcadores
+```bash
+curl -s -X POST http://localhost:8000/api/v1/upload \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "image=@/ruta/a/foto/sin/cartilla.jpg" \
+  -F "session_id=$SESSION" | python3 -m json.tool
+```
+
+## 4. CONEXIÓN A POSTGRESQL CON DBEAVER
+
+### Configuración de conexión
+
+Parámetro | Valor
+----------|------
+Host | localhost
+Port | 5432
+Database | omr_pwa
+Username | omr_user
+Password | omr_pass
+
+### Pasos en DBeaver
+
+1. Abrir DBeaver
+2. Click en " Nueva Conexión" (ícono de rayo +)
+3. Seleccionar **PostgreSQL**
+4. Llenar:
+   - Host: `localhost`
+   - Port: `5432`
+   - Database: `omr_pwa`
+   - Username: `omr_user`
+   - Password: `omr_pass`
+5. Click "Test Connection ..."
+   - Si pide driver, aceptar descargar
+   - Debe decir "Connected"
+6. Click "Finish"
+
+### Explorar datos
+
+Una vez conectado, en el panel izquierdo:
+```
+omr_pwa
+├── Schemas
+│   └── public
+│       ├── Tables
+│       │   ├── users        → login de profesores
+│       │   ├── sessions     → sesiones de captura
+│       │   ├── images       → imágenes procesadas con respuestas
+│       │   └── templates    → plantillas OMR
+```
+
+### Queries útiles
+
+```sql
+-- Ver usuarios
+SELECT id, email, full_name, subscription_status, max_images
+FROM users;
+
+-- Ver sesiones con datos
+SELECT s.id, u.email, s.name, s.status, s.total_images, s.processed_images
+FROM sessions s
+JOIN users u ON u.id = s.user_id
+ORDER BY s.created_at DESC;
+
+-- Ver imágenes procesadas con respuestas
+SELECT i.sequenced_id, i.filename, i.status, i.score, i.answers, i.error_message
+FROM images i
+JOIN sessions s ON s.id = i.session_id
+WHERE s.id = 'uuid-de-la-sesion'
+ORDER BY i.created_at;
+
+-- Ver respuestas de una imagen específica
+SELECT i.sequenced_id, i.answers, i.score, i.total_questions
+FROM images i
+WHERE i.status = 'SUCCESS'
+LIMIT 10;
+```
+
+### Ver logs de la API
+
+```bash
+docker logs -f omr-pwa-fase2-api-1
+```
+
+================================================================================
+FIN DEL ARCHIVO
+================================================================================

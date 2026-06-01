@@ -10,6 +10,7 @@ from app.models import Template
 async def create_template(db: AsyncSession, template_data: dict) -> Template:
     template = Template(
         name=template_data["name"],
+        institution_id=template_data.get("institution_id"),
         description=template_data.get("description"),
         page_width=template_data["page_width"],
         page_height=template_data["page_height"],
@@ -35,6 +36,9 @@ async def get_template_by_id(db: AsyncSession, template_id: uuid.UUID) -> Templa
     return result.scalar_one_or_none()
 
 
-async def list_templates(db: AsyncSession) -> list[Template]:
-    result = await db.execute(select(Template).order_by(Template.name))
+async def list_templates(db: AsyncSession, institution_id: str | None = None) -> list[Template]:
+    query = select(Template).order_by(Template.name)
+    if institution_id:
+        query = query.where(Template.institution_id == institution_id)
+    result = await db.execute(query)
     return list(result.scalars().all())

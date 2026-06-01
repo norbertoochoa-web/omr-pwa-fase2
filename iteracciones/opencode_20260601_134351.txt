@@ -1,0 +1,63 @@
+## RESUMEN SESIÓN - 01 JUNIO 2026 (2da parte)
+
+### Proyecto: omr-pwa-fase2 (FastAPI + PostgreSQL + Docker)
+
+### 1. Resultados OMR ahora en outputs/{institution_id}/
+- Nuevo directorio `outputs/` con subcarpetas por institución.
+- Al finalizar una sesión, el TXT se guarda en `outputs/{institution_id}/{session_id}.txt`.
+- Template semilla `imax_evaluacion` asociado a institución `catolico`.
+- Verificado: TXT en `outputs/catolico/5eb954ba-....txt`.
+
+### Cambios realizados
+| Archivo | Cambio |
+|---------|--------|
+| `app/models/__init__.py` | `Session.institution_id` agregado |
+| `app/config.py` | `OUTPUTS_DIR = "outputs"` agregado |
+| `app/routes/upload.py` | Asigna `institution_id` a sesión desde template |
+| `app/routes/sessions.py` | TXT se guarda en `outputs/{institution_id}/` |
+| `app/routes/download.py` | Lee TXT desde `outputs/{institution_id}/` |
+| `app/seed.py` | Template con `institution_id="catolico"` |
+| `app/main.py` | Crea `outputs/` en startup |
+| `Dockerfile` | `mkdir -p outputs` |
+
+### 2. API funcionando
+- Tests: **10/10 pasan** con cartilla_rabba.jpeg
+- Template seed: `imax_evaluacion` (catolico, 60 preguntas)
+- Endpoints activos: health, auth, templates CRUD, sessions, upload, download
+
+### 3. Estructura actual
+```
+data/catolico/
+    template.json, evaluation.json, config.json, omr_marker.jpg
+    cartilla_6.jpeg, cartilla_rabba.jpeg
+
+outputs/
+├── catolico/       ← TXTs de sesiones católico
+└── default/        ← TXTs de sesiones sin institución
+
+uploads/            ← imágenes subidas (volumen Docker)
+
+iteracciones/       ← resúmenes de sesiones
+```
+
+### 4. Pendientes
+- [ ] Modificar `upload.py` para aceptar `template_name` o `template_id` (hoy hardcodea `"imax_evaluacion"`)
+- [ ] Agregar endpoint para subir marker image asociado a template
+- [ ] Investigar `ERR_BLANK` en última pregunta (posible offset)
+- [ ] Migrar a S3/Cloud Storage para producción (multi-instancia)
+- [ ] Agregar volumen `outputs_data` en docker-compose para producción
+
+### 5. Comandos
+```bash
+cd /home/rodrigo/Workspace/Imax/Mobil_web/omr-pwa-fase2
+
+# Iniciar (resetea BD)
+echo "manager" | sudo -S docker compose down -v \
+  && echo "manager" | sudo -S docker compose up -d --build
+
+# Tests
+bash test_api.sh data/catolico/cartilla_rabba.jpeg
+
+# Ver TXT generado
+cat outputs/catolico/*.txt
+```

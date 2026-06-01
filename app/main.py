@@ -7,12 +7,13 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import init_db
-from app.routes import auth, subscription, sessions, upload, download, health
+from app.routes import auth, subscription, sessions, upload, download, health, templates
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    os.makedirs(settings.OUTPUTS_DIR, exist_ok=True)
     await init_db()
     yield
 
@@ -40,3 +41,4 @@ app.include_router(subscription.router, prefix=api_prefix, tags=["Subscription"]
 app.include_router(sessions.router, prefix=api_prefix, tags=["Sessions"])
 app.include_router(upload.router, prefix=api_prefix, tags=["Upload"])
 app.include_router(download.router, prefix=api_prefix, tags=["Download"])
+app.include_router(templates.router, prefix=api_prefix, tags=["Templates"])

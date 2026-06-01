@@ -38,12 +38,19 @@ async def upload_and_process(
     with open(file_path, "wb") as f:
         f.write(content)
 
+    img_id = uuid.uuid4()
+
     template = await get_template_by_name(db, "imax_evaluacion")
     if not template:
         result_data = {"status": "error", "error_message": "Default template not configured"}
     else:
+        if not session_obj.institution_id and template.institution_id:
+            session_obj.institution_id = template.institution_id
+        inst_dir = session_obj.institution_id or "default"
+        marked_path = os.path.join(settings.OUTPUTS_DIR, inst_dir, f"{img_id}_marked.jpg")
         result_data = await process_single_image_sync(
-            db, uuid.UUID(session_id), image.filename, file_path, template.id
+            db, uuid.UUID(session_id), image.filename, file_path, template.id,
+            marked_path=marked_path,
         )
 
     img_record = await add_image_result(
@@ -51,6 +58,7 @@ async def upload_and_process(
         session_id=uuid.UUID(session_id),
         filename=image.filename,
         original_path=file_path,
+        image_id=img_id,
         answers=result_data.get("answers"),
         score=result_data.get("score"),
         total_questions=result_data.get("total"),

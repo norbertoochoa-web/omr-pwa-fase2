@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     JWT_EXPIRATION_HOURS: int = 12
 
     UPLOAD_DIR: str = "uploads"
+    OUTPUTS_DIR: str = "outputs"
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024
 
     SMTP_HOST: str = ""

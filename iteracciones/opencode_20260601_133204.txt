@@ -1,0 +1,80 @@
+## RESUMEN SESIÓN - 01 JUNIO 2026
+
+### Proyecto: omr-pwa-fase2 (FastAPI + PostgreSQL + Docker)
+
+### 1. Seed.py ahora carga desde data/catolico/
+- Eliminados los diccionarios hardcodeados `IMAX_TEMPLATE_DATA`, `IMAX_EVALUATION_DATA`, `IMAX_CONFIG`.
+- `seed.py` lee template, evaluation y config desde archivos JSON en `data/catolico/`.
+- Extrae `pageDimensions`, `bubbleDimensions` desde `template.json` para los campos de la tabla.
+
+### 2. Nuevo omr_marker.jpg
+- Se reemplazó el `omr_marker.jpg` de la raíz del proyecto por uno compatible con las cartillas católico.
+- **Resultado:** Las 2 cartillas de prueba (`cartilla_rabba.jpeg`, `cartilla_6.jpeg`) se procesan correctamente (60 respuestas detectadas cada una).
+
+### 3. Columna institution_id añadida (Task 4)
+- **Modelo `Template`** (`app/models/__init__.py:33`): nuevo campo `institution_id: Mapped[str]` (nullable, indexado).
+- **`create_template`** (`app/services/template_service.py`): ahora acepta `institution_id`.
+- **`list_templates`**: filtro opcional por `institution_id`.
+
+### 4. Endpoint POST /api/v1/templates (Task 2)
+Archivos creados:
+- `app/routes/templates.py` — router con 3 endpoints:
+  - `POST /api/v1/templates` — Crear template (requiere auth)
+  - `GET /api/v1/templates` — Listar templates (filtro `?institution_id=`)
+  - `GET /api/v1/templates/{id}` — Obtener template por ID
+- `app/schemas/template.py` — Schemas `TemplateCreate` y `TemplateResponse`
+- Registrado en `app/main.py`
+
+### 5. API funcionando
+- `http://localhost:8000/api/v1/health` → `{"status": "healthy"}`
+- Seed ejecutado: usuario admin (`admin@test.com` / `password123`), template `imax_evaluacion`
+- **Tests: 10/10 pasan** (`test_api.sh` con cartilla_rabba.jpeg)
+
+### 6. Estructura actual
+```
+data/
+└── catolico/
+    ├── template.json          # Config cartilla 60 preguntas (católico)
+    ├── evaluation.json        # Respuestas correctas
+    ├── config.json            # Override procesamiento
+    ├── omr_marker.jpg         # Patrón esquinas (católico)
+    ├── cartilla_6.jpeg        # Muestra prueba
+    └── cartilla_rabba.jpeg    # Muestra prueba
+
+iteracciones/
+    ├── opencode_20260528_164715.txt
+    ├── opencode_20260528_165300.txt
+    ├── opencode_20260528_170336.txt
+    ├── opencode_20260528_214200.txt
+    ├── opencode_20260528_215200.txt
+    └── opencode_20260601_133204.txt   ← este archivo
+```
+
+### 7. Pendientes para próxima sesión
+- [ ] Modificar `upload.py` para que acepte `template_name` o `template_id` (actualmente hardcodea `"imax_evaluacion"`)
+- [ ] Agregar endpoint para subir marker image (relacionado al template)
+- [ ] Investigar `ERR_BLANK` en última pregunta de cartillas procesadas (posible offset en fieldBlocks)
+
+### 8. Comandos importantes
+```bash
+# Iniciar contenedores (reconstruye y resetea BD)
+cd /home/rodrigo/Workspace/Imax/Mobil_web/omr-pwa-fase2
+echo "manager" | sudo -S docker compose down -v && echo "manager" | sudo -S docker compose up -d --build
+
+# Ver logs
+echo "manager" | sudo -S docker compose logs api --tail 30
+
+# Correr tests (con cartilla específica)
+bash test_api.sh data/catolico/cartilla_rabba.jpeg
+
+# Probar endpoint templates (con token)
+TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@test.com","password":"password123"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+
+curl -s -X POST http://localhost:8000/api/v1/templates \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"name":"mi_template","institution_id":"mi_inst","page_width":1600,"page_height":2300,"bubble_width":43,"bubble_height":43,"template_data":{}}'
+```

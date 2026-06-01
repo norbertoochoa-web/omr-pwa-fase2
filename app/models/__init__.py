@@ -29,7 +29,8 @@ class Template(Base):
     __tablename__ = "templates"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    institution_id: Mapped[str] = mapped_column(String(100), nullable=True, index=True)
     description: Mapped[str] = mapped_column(Text, nullable=True)
     page_width: Mapped[int] = mapped_column(Integer, nullable=False)
     page_height: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -48,6 +49,7 @@ class Session(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    institution_id: Mapped[str] = mapped_column(String(100), nullable=True, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="OPEN")
     total_images: Mapped[int] = mapped_column(Integer, default=0)

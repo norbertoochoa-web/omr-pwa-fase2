@@ -1,3 +1,5 @@
+import cv2
+
 from app.omr_engine.template import Template
 from app.omr_engine.core import ImageInstanceOps
 from app.omr_engine.defaults import CONFIG_DEFAULTS
