@@ -17,7 +17,7 @@ from app.omr_engine.image_constants import (
 )
 from app.omr_engine.logger import logger
 from app.omr_engine.processors.interfaces.ImagePreprocessor import ImagePreprocessor
-from app.omr_engine.image_utils import ImageUtils
+from app.omr_engine.image_utils import ImageUtils, CLAHE_HELPER
 
 
 class CropOnMarkers(ImagePreprocessor):
@@ -37,6 +37,7 @@ class CropOnMarkers(ImagePreprocessor):
         )
         self.marker_rescale_steps = int(marker_ops.get("marker_rescale_steps", 10))
         self.apply_erode_subtract = marker_ops.get("apply_erode_subtract", True)
+        self.apply_clahe = marker_ops.get("apply_clahe", False)
         self.marker = None
 
     def set_marker_image(self, marker_image: np.ndarray):
@@ -90,6 +91,13 @@ class CropOnMarkers(ImagePreprocessor):
                 iterations=EROSION_PARAMS["iterations"],
             ))
         )
+
+        if self.apply_clahe:
+            if len(image_eroded_sub.shape) == 3:
+                gray = cv2.cvtColor(image_eroded_sub, cv2.COLOR_BGR2GRAY)
+            else:
+                gray = image_eroded_sub
+            image_eroded_sub = CLAHE_HELPER.apply(gray)
 
         h1, w1 = image_eroded_sub.shape[:2]
         midh, midw = (

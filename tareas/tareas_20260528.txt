@@ -1,0 +1,48 @@
+omr_pwa_fase1
+especificaciones_lectura_cartilla_movil.md
+
+/home/rodrigo/Workspace/Imax/Mobil_web/omr-pwa-fase2
+
+/home/rodrigo/Workspace/Imax/BACKEND
+
+Hola para la Fase 2 vamos a reutilizar , el proyecto en phyton que se encuentra en el siguiente directorio : /home/rodrigo/Workspace/Imax/BACKEND
+para realizar su conversión a aplicación backend, se encuentra en el directorio : /home/rodrigo/Workspace/Imax/Mobil_web/omr-pwa-fase
+un archivo de especificaciones : especificaciones_lectura_cartilla_movil.md ||
+en este archivo se encuentra toda la información de como funciona el proyecto en phyton como realiza obtiene el resultado de la lectura de la imagen
+de las cartillas de respuesta.   ||  la construcción del nuevo proyecto tiene que ser en el directorio : /home/rodrigo/Workspace/Imax/Mobil_web/omr-pwa-fase2||
+ por lo que tendrás que importar el proyecto y/o las clases necesarias a este nuevo directorio || favor si hay dudas consultalas para analaizarlas.
+
+=========================
+Favor, analicemos me puedes indicar los pasos que se realiza desde  la FASE 1 la aplicacióm mobil como envia la imagen desde el celular y como la resibe el backend FASE 2 y posteriomente la procesa. para entender si vamos bien encaminados con el proyecto.
+
+
+Favor, analicemos me puedes indicar los pasos que se realiza desde  la FASE 1 la aplicacióm mobil como envia la imagen desde el celular y como la resibe el backend FASE 2 y posteriomente la procesa. para entender si vamos bien encaminados con el proyecto.
+=========================
+rebicemos, si está correcto lo siguiente o si tienes una mejor idea me la indicas, acuerdate que tu perfil es de un experto en desarrollo de software
+
+1. Profesor saca la foto de la cartilla (obtiene desde la aplicación mobil) Fase 1
+2. se envia blob a la api del backend para que la imagen sea procesada y obtener el resultado de las preguntas. 
+   Ejemplo : 
+   Pregunta 1: A
+   Pregunta 2: B
+   Pregunta 3: D ....
+
+3. en la base de datos o en la memoria del backend , tiene que tener retenida la información de todas las cartillas procesadas "resultados" enviados desde el celular del profesor.
+
+4. el profesor en la aplicaación mobil tiene que tener un boton o algo asi , que debiera finalizar el proceso de envio de imagenes al backend para ser procesadas.
+5. desde el backend debe salir un emai a la cuenta del profesor adjunto el archivo TxT con el resultado obtenido por cada cartilla.
+6. esto más o menos corresponderia al MVP. minimo producto viable.
+
+=============================
+
+perfecto pero primero creame un directorio en /home/rodrigo/Workspace/Imax/Mobil_web/omr-pwa-fase2 que se llame iteracciones donde guardes tu respuesta de ahora en un archivo con el prefijo opencode_fecha_hora.txt para que vayamos guardando un historial || en este directorio se guarda en archivo las respuestas que yo te pida que son necesarias que queden respaldadas. || lo otro que necesito que deje en github el proyecto fase 2 , al igual como está respaldado el de la fase 1 || posteriormente hace el build de todas las clases necesarias segun lo que me habias propuesto.
+
+===========
+
+
+
+
+
+
+
+

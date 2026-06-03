@@ -1,0 +1,66 @@
+## RESUMEN SESIÓN - 03 JUNIO 2026 (Integración PWA Fase1 + Backend Fase2)
+
+### Proyecto: omr-pwa-fase2 (FastAPI backend) + omr-pwa-fase1 (Frontend PWA mobile)
+
+### Hito: Pipeline completo funcionando desde el celular
+- Login → cámara (o galería) → upload → OMR → score en pantalla ✓
+- Score 2/60 en foto real desde celular (esperado, foto no profesional)
+- Botón descargar TXT funcional
+
+### Bugs encontrados y corregidos
+
+| # | Problema | Síntoma | Fix |
+|---|----------|---------|-----|
+| 1 | `createSession` enviaba `{session_id, user_id}` pero backend espera `{name}` | Sesión nunca se creaba en backend | `api.js:69` → enviar `{name}` |
+| 2 | Frontend usaba `"SESSION_1747353824093"` en vez del UUID del backend | Upload fallaba con 422 (UUID inválido) | `Camera.js:19-23` → usar `result.session_token` |
+| 3 | API URL en `.env` tenía puerto **3001** (mock viejo), backend corre en **8000** | "Network error" en login | `api.js:7` eliminar filtro 'localhost'; `.env` → puerto 8000 |
+| 4 | `getBaseUrl()` saltaba env vars que contenían 'localhost' | Fallback a puerto 3001 aunque hubiera env var correcta | api.js: eliminar `!envUrl.includes('localhost')` |
+| 5 | Falta de auto-sync tras captura | Imagen quedaba en IndexedDB, nunca llegaba al backend | Upload directo con `fetch` (sin cola) |
+| 6 | Fallback "Usar galería" no hacía upload | Imagen se guardaba en DB pero no se procesaba | `handleFallbackCapture` ahora hace upload directo |
+| 7 | Botón "Seleccionar imagen" dentro de div `pointer-events-none` | Click no funcionaba | Fallback reemplaza el `flex-1.relative`, no el overlay |
+| 8 | Sesión se creaba DESPUÉS de getUserMedia | `currentSessionId=null` si cámara fallaba | Sesión creada antes de cámara |
+| 9 | PWA Service Worker cacheaba JS viejo | Usuario nunca recibía las correcciones | `vite.config.js`: runtimeCaching → `NetworkOnly` |
+| 10 | Toast desaparecía en 2.5s | Usuario no veía errores | Toast extendido a 3.5s + barra de estado persistente |
+
+### Archivos modificados (frontend omr-pwa-fase1)
+
+| Archivo | Cambios |
+|---------|---------|
+| `frontend/src/core/api.js` | `createSession` envía `{name}`, `getBaseUrl` sin filtro 'localhost', fallback puerto 8000 |
+| `frontend/src/screens/Camera.js` | Upload directo, fallback galería con upload, sesión antes de cámara, status persistente, errores visibles |
+| `frontend/vite.config.js` | Service Worker no cachea API calls (NetworkOnly) |
+| `frontend/.env` | `VITE_API_URL=http://localhost:8000/api/v1` |
+
+### Archivos backend (omr-pwa-fase2)
+
+- `start-mobile-test.sh`: script para pruebas móviles (red local + ngrok)
+
+### Pruebas desde celular
+
+```bash
+cd /home/rodrigo/Workspace/Imax/Mobil_web/omr-pwa-fase2
+bash start-mobile-test.sh
+# Opción 1 (WiFi local) o 2 (ngrok si red corporativa bloquea)
+```
+
+- Usuario: `admin@test.com` / `password123`
+- Abrir en Chrome normal (NO PWA instalada) en `http://IP:5173`
+- Si la cámara del browser no arranca → "Seleccionar imagen" → cámara nativa
+
+### Estado actual del sistema
+
+```
+Login → POST /api/v1/auth/login → 200
+Sesión → POST /api/v1/sessions {name} → 201, devuelve UUID
+Upload → POST /api/v1/upload (multipart) → 200, devuelve {status, answers, score}
+Download → GET /api/v1/sessions/{UUID}/download → TXT file
+```
+
+### Pendientes
+
+- [ ] Modificar `upload.py` para aceptar `template_name` o `template_id` (hoy hardcodea `"imax_evaluacion"`)
+- [ ] Agregar endpoint para subir marker image asociado a template
+- [ ] Investigar `ERR_BLANK` en última pregunta (posible offset en fieldBlocks)
+- [ ] Mostrar respuestas detalladas en la UI (no solo score)
+- [ ] Migrar a S3/Cloud Storage para producción
+- [ ] Agregar cron de limpieza para imágenes > N días
