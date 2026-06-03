@@ -1,0 +1,10 @@
+[SESSION]
+ID=b783b846-147b-4998-a9bf-bfb7956259ad
+PROFESOR=00000000-0000-0000-0000-000000000001
+FECHA=03/06/2026 22:10:10
+[DATA]
+A001;B;A;B;;A;;;B;A;C;A;;E;;A;;;;A;;;;A;E;;;E;C;B;B;;;B;D;B;D;E;;D;;E;C;;C;C;;C;;;;;;;;;;;;;;ERR_BLANK
+A002;D;E;C;B;A;A;C;B;E;D;;B;C;;E;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;ERR_BLANK
+[END]
+TOTAL=2
+ERRORES=2

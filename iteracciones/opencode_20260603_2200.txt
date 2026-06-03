@@ -1,0 +1,87 @@
+# Resumen de Sesión - 03 Junio 2026 22:00
+
+## Estado General
+- **Frontend PWA (omr-pwa-fase1)**: Funcional, captura y sube imágenes al backend
+- **Backend OMR (omr-pwa-fase2)**: API FastAPI + PostgreSQL + Docker, funcional con 10/10 tests
+- **Pipeline completo**: Login → Captura/foto → Upload → OMR → Score → TXT descargable
+
+## Cambios Recientes
+
+### Frontend (omr-pwa-fase1)
+- `style.css`: Agregadas clases `safe-area-top` y `safe-area-bottom` para soporte de notch en iPhone
+- `Camera.js`:
+  - Botón de descarga movido **antes** del bloque getUserMedia (funciona en modo fallback)
+  - `handleFallbackCapture` ahora habilita el botón descarga (usa `document.getElementById`)
+  - Puerto de fallback unificado a **8000** (era 3001 inconsistente)
+  - Descarga usa `navigator.share()` en móvil, fallback a anchor dinámico
+  - Botón descarga siempre se habilita tras capturar (no depende de IndexedDB)
+
+### Backend (omr-pwa-fase2)
+- `crop_on_markers.py`: Agregado CLAHE preprocessing configurable (`apply_clahe`)
+- `data/catolico/template.json`:
+  - `apply_clahe: true` — realza contraste antes de buscar marcadores
+  - `marker_rescale_steps: 15` — pasos más finos para escala del marker
+- `data/catolico/config.json`:
+  - `MIN_JUMP: 15` (era 25) — detecta lápiz mina
+  - `MIN_GAP: 20` (era 30)
+  - `CONFIDENT_SURPLUS: 3` (era 5)
+
+## Funcionalidades Actuales
+
+| Característica | Estado |
+|---|---|
+| Login con JWT | ✅ |
+| Crear sesión | ✅ |
+| Captura desde cámara (video stream) | ✅ |
+| Captura desde cámara nativa (fallback input) | ✅ |
+| Upload directo al backend | ✅ |
+| OMR con detección de marcadores | ✅ |
+| Score en pantalla (X/60 correctas) | ✅ |
+| Descarga TXT (Delphi 7 format) | ✅ |
+| Sincronización de cola offline | ✅ |
+| Safe-area para notch | ✅ |
+| CLAHE preprocessing | ✅ |
+| Thresholds para lápiz mina | ✅ |
+
+## Problemas Conocidos
+
+1. **Foto comprimida (44KB) no produce buenos resultados OMR** — la imagen de prueba `imagen_mobil.jpeg` está muy comprimida para detectar marcadores finos
+2. **Captura desde cámara (getUserMedia)** puede fallar en Chrome incógnito → usa modo fallback
+3. **El TXT genera solo 5 respuestas por línea** — el formato Delphi 7 espera agrupaciones de 5, no las 60 preguntas completas
+4. **Los outputs/ se crean como root** (usuario del contenedor) → requieren sudo para borrar
+
+## Arquitectura
+
+```
+[PWA Móvil] --fetch--> [FastAPI :8000] --> PostgreSQL
+                            |
+                    [OMR Engine]
+                    CropOnMarkers (CLAHE + template matching)
+                    → read_omr_response (threshold dinámico)
+                    → EvaluationEngine (score vs respuestas)
+                            |
+                    [outputs/{institution}/{session}/]
+                    original.jpg + marked.jpg + session.txt
+```
+
+## Pendientes
+
+- Probar con fotos reales (no comprimidas) para validar thresholds de lápiz mina
+- Verificar que la imagen marcada salga derecha (no ladeada) con CLAHE activado
+- Mejorar formato TXT para 60 preguntas por línea (no solo 5)
+- Agregar cron de limpieza para outputs antiguos
+- Agregar endpoint para subir marker image asociado a template
+
+## Commits Recientes
+
+### omr-pwa-fase1 (frontend)
+```
+b28dbd7 fix: download btn listener movido antes de getUserMedia para modo fallback
+51d1685 fix: download siempre habilitado tras captura + Web Share API para movil
+f93417f fix: safe-area insets para botones en celulares con notch + puerto 8000
+```
+
+### omr-pwa-fase2 (backend)
+```
+62f8c36 feat: CLAHE preprocessing + lower threshold params + finer rescale steps
+```

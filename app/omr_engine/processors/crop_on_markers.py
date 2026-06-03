@@ -84,20 +84,22 @@ class CropOnMarkers(ImagePreprocessor):
             logger.error("Marker image not set. Cannot apply CropOnMarkers.")
             return None
 
+        working = image
+
+        if self.apply_clahe:
+            if len(working.shape) == 3:
+                gray = cv2.cvtColor(working, cv2.COLOR_BGR2GRAY)
+            else:
+                gray = working
+            working = CLAHE_HELPER.apply(gray)
+
         image_eroded_sub = ImageUtils.normalize_util(
-            image if self.apply_erode_subtract
-            else (image - cv2.erode(
-                image, kernel=np.ones(EROSION_PARAMS["kernel_size"]),
+            working if self.apply_erode_subtract
+            else (working - cv2.erode(
+                working, kernel=np.ones(EROSION_PARAMS["kernel_size"]),
                 iterations=EROSION_PARAMS["iterations"],
             ))
         )
-
-        if self.apply_clahe:
-            if len(image_eroded_sub.shape) == 3:
-                gray = cv2.cvtColor(image_eroded_sub, cv2.COLOR_BGR2GRAY)
-            else:
-                gray = image_eroded_sub
-            image_eroded_sub = CLAHE_HELPER.apply(gray)
 
         h1, w1 = image_eroded_sub.shape[:2]
         midh, midw = (
