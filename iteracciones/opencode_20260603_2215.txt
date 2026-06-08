@@ -1,0 +1,54 @@
+# Resumen Final de Sesión - 03 Junio 2026 22:15
+
+## Estado General
+- **Frontend PWA** (`/home/rodrigo/Workspace/Imax/Mobil_web/omr-pwa-fase1`): Funcional con captura, upload, score en pantalla, descarga TXT
+- **Backend OMR** (`/home/rodrigo/Workspace/Imax/Mobil_web/omr-pwa-fase2`): FastAPI + PostgreSQL + Docker, 10/10 tests
+- **Pipeline**: Login → Captura (cámara o galería) → Upload directo → OMR → Score en pantalla → TXT descargable
+
+## Cambios Recientes (Frontend)
+- `style.css`: Clases `safe-area-top` / `safe-area-bottom` para notch iPhone
+- `Camera.js`:
+  - Botón descarga movido **antes** del bloque `getUserMedia` (funciona en modo fallback)
+  - `handleFallbackCapture` ahora usa `document.getElementById('download-btn')` (no variable fuera de scope)
+  - Puerto unificado a **8000** (era 3001 en capture handler)
+  - Descarga usa `navigator.share()` si disponible, fallback a anchor dinámico
+  - Botón descarga se habilita siempre tras capturar (no depende de IndexedDB)
+
+## Cambios Recientes (Backend)
+- `crop_on_markers.py`: CLAHE preprocessing aplicado **antes** del `erode_subtract` (así no daña los marcadores finos en fotos de bajo contraste)
+- `data/catolico/template.json`:
+  - `apply_clahe: true`
+  - `marker_rescale_steps: 15` (más precisión en escala)
+- `data/catolico/config.json`:
+  - `MIN_JUMP: 15` → más sensible a lápiz mina
+  - `MIN_GAP: 20`
+  - `CONFIDENT_SURPLUS: 3`
+
+## Problemas Conocidos
+1. **Fotos ladeadas**: el CropOnMarkers no tolera bien fotos levemente inclinadas; el perspective transform produce imagen torcida
+2. **Formato TXT**: solo genera 5 respuestas por línea (formato Delphi 7), deberían ser las 60 preguntas
+3. **Foto comprimida (44KB)**: la imagen de prueba `imagen_mobil.jpeg` no tiene suficiente detalle para detectar los marcadores
+4. **Outputs/ como root**: los archivos los crea el usuario del contenedor Docker, requieren sudo para borrar
+
+## Commits Recientes
+
+### Frontend (main)
+```
+6a30127 fix: download btn tambien habilitado en modo fallback
+51d1685 fix: download siempre habilitado tras captura + Web Share API
+f93417f fix: safe-area insets para botones + puerto 8000
+```
+
+### Backend (main)
+```
+3ab09c2 fix: CLAHE antes de erode_subtract
+62f8c36 feat: CLAHE preprocessing + lower threshold params
+```
+
+## Archivos Clave
+- `iteracciones/opencode_20260603_2200.txt` — resumen detallado anterior
+- `errores/` — imágenes de prueba (cartilla_6, cartilla_rabba, imagen_mobil)
+- `data/catolico/` — template, config, evaluation, marker para cartilla católica
+- `outputs/` — resultados organizados por institution_id/session_id
+- `start-mobile-test.sh` — script para pruebas desde celular
+- `test_api.sh` — suite de pruebas automatizadas

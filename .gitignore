@@ -10,6 +10,7 @@ dist/
 build/
 uploads/*
 !uploads/.gitkeep
+outputs/*
 node_modules/
 .pytest_cache/
 .mypy_cache/
