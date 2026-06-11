@@ -49,7 +49,7 @@ async def process_single_image_sync(
             "error_message": "No se detectaron las marcas de esquina. Por favor, reencuadre la foto y asegúrese de que se visualicen los 4 extremos de la cartilla.",
         }
 
-    response_dict, final_marked_img, _multi_marked = result_data
+    response_dict, final_marked_img, multi_marked = result_data
 
     if marked_path and final_marked_img is not None:
         os.makedirs(os.path.dirname(marked_path), exist_ok=True)
@@ -67,7 +67,10 @@ async def process_single_image_sync(
 
     answers = {}
     for k in sorted(response_dict.keys(), key=lambda x: int(x[1:]) if x[1:].isdigit() else 0):
-        answers[k] = response_dict.get(k, "")
+        val = response_dict.get(k, "")
+        if len(val) > 1:
+            val = "ERROR"
+        answers[k] = val
 
     return {
         "status": "success",

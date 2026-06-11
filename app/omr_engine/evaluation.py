@@ -32,12 +32,10 @@ class EvaluationEngine:
             elif marked == correct_answer:
                 verdicts[question] = "Correct"
                 score += self.default_scheme.get("correct", 1)
+            elif len(marked) > 1:
+                verdicts[question] = "ERROR"
             else:
-                # Check for multi-marked
-                if len(marked) > 1:
-                    verdicts[question] = "Incorrect"
-                else:
-                    verdicts[question] = "Incorrect"
+                verdicts[question] = "Incorrect"
                 score += self.default_scheme.get("incorrect", 0)
 
         return score, verdicts

@@ -1,0 +1,121 @@
+Iteraccion: 2026-06-11 13:39
+Asunto: Manual de operacion servicios VPS
+
+VPS: 162.35.161.249
+Usuario: opencode
+Repo backend: /home/opencode/omr-pwa-fase2
+Repo portal: /home/opencode/omr-pwa-fase3-portal
+
+================================================
+SERVICIOS
+================================================
+
+1. Caddy (proxy reverso, corre en el host)
+   - Puerto 80/443
+   - Config: /etc/caddy/Caddyfile
+   - Gestion: sudo systemctl restart caddy
+
+2. PostgreSQL (contenedor Docker fase2)
+   - Puerto interno: 5432 (solo localhost)
+   - Datos persistentes en volumen Docker pgdata
+   - Se levanta junto con api
+
+3. API Backend (contenedor Docker fase2)
+   - Puerto host: 8000
+   - Imagen: omr-pwa-fase2-api
+   - Docker compose: /home/opencode/omr-pwa-fase2/docker-compose.prod.yml
+   - Datos: /var/omr/data/outputs/ (bind mount)
+   - Endpoints: http://162.35.161.249:8000/docs
+
+4. Portal Clientes (contenedor Docker fase3-portal)
+   - Puerto host: 8001
+   - Imagen: omr-pwa-fase3-portal-portal
+   - Docker compose: /home/opencode/omr-pwa-fase3-portal/docker-compose.yml
+   - Datos: /var/omr/data/outputs/ (bind mount via portal)
+   - URL: http://162.35.161.249:8001/portal/login
+
+================================================
+LEVANTAR SERVICIOS (orden recomendado)
+================================================
+
+# 1. Backend (PostgreSQL + API)
+cd /home/opencode/omr-pwa-fase2
+sudo docker compose -f docker-compose.prod.yml up -d
+
+# 2. Portal
+cd /home/opencode/omr-pwa-fase3-portal
+sudo docker compose up -d
+
+# 3. Verificar que los 3 contenedores esten Up
+sudo docker ps
+
+================================================
+DETENER SERVICIOS
+================================================
+
+# Detener todo (mantiene datos en volumentes)
+cd /home/opencode/omr-pwa-fase2
+sudo docker compose -f docker-compose.prod.yml down
+
+cd /home/opencode/omr-pwa-fase3-portal
+sudo docker compose down
+
+# Solo detener un servicio especifico:
+sudo docker compose -f docker-compose.prod.yml stop api
+sudo docker compose -f docker-compose.prod.yml start api
+
+================================================
+REINICIAR LUEGO DE ACTUALIZAR CODIGO
+================================================
+
+cd /home/opencode/omr-pwa-fase2
+git pull
+sudo docker compose -f docker-compose.prod.yml up -d --build api
+
+cd /home/opencode/omr-pwa-fase3-portal
+git pull
+sudo docker compose up -d --build portal
+
+================================================
+VER LOGS
+================================================
+
+# API
+sudo docker logs -f omr-pwa-fase2-api-1
+
+# Portal
+sudo docker logs -f omr-pwa-fase3-portal-portal-1
+
+# PostgreSQL
+sudo docker logs -f omr-pwa-fase2-db-1
+
+================================================
+DATOS PERSISTENTES
+================================================
+
+- Base de datos PostgreSQL: volumen Docker pgdata
+- Imagenes subidas (temporales): volumen Docker uploads_data
+- Resultados procesados: /var/omr/data/outputs/
+  - Estructura: /var/omr/data/outputs/<institution>/<session>/
+  - Archivos: *_original.jpg, *_marked.jpg, <session>.txt
+  - Limpieza automatica via cron: 0 3 * * * (30 dias)
+
+================================================
+ACCESO A IMAGENES VIA WEB
+================================================
+
+API (soporte):
+  http://162.35.161.249:8000/data/outputs/<institution>/<session>/<archivo>
+
+Portal (cliente, requiere login):
+  http://162.35.161.249:8001/portal/sessions/<session_id>
+
+================================================
+SOLUCION DE PROBLEMAS COMUNES
+================================================
+
+- Si el API no responde: revisar logs con docker logs
+- Si la DB no conecta: asegurar que postgres este healthy
+- Si el portal no ve imagenes: verificar que /var/omr/data exista
+  y tenga la estructura outputs/<institution>/<session>/
+- Si hay cambios en requirements.txt, rebuildear con --build

@@ -30,6 +30,9 @@ def generate_delphi_txt(session: Session) -> str:
                 if val == "" or val is None:
                     val = ""
                     has_error = True
+                elif val == "ERROR" or len(str(val)) > 1:
+                    val = "E"
+                    has_error = True
                 answer_list.append(str(val)[0] if str(val) else "")
 
             while len(answer_list) < 5:
