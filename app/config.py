@@ -1,3 +1,4 @@
+import os
 from pydantic_settings import BaseSettings
 
 
@@ -20,8 +21,14 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_HOURS: int = 12
 
+    DATA_DIR: str = "/var/omr/data"
+
     UPLOAD_DIR: str = "uploads"
-    OUTPUTS_DIR: str = "outputs"
+
+    @property
+    def OUTPUTS_DIR(self) -> str:
+        return os.path.join(self.DATA_DIR, "outputs")
+
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024
 
     SMTP_HOST: str = ""

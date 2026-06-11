@@ -33,6 +33,7 @@ services:
       DEBUG: "false"
     volumes:
       - uploads_data:/app/uploads
+      - /var/omr/data:/var/omr/data
     command: >
       sh -c "python -m app.seed &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4"

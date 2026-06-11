@@ -33,6 +33,7 @@ app.add_middleware(
 )
 
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+app.mount("/data", StaticFiles(directory=settings.DATA_DIR), name="data")
 
 api_prefix = settings.API_V1_PREFIX
 app.include_router(health.router, prefix=api_prefix, tags=["Health"])
