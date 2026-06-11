@@ -1,0 +1,22 @@
+Iteraccion: 2026-06-11 13:26
+Asunto: Plan de persistencia de imagenes OMR en VPS
+
+Decisiones tomadas:
+- Path base unico para datos: /var/omr/data
+- Estructura: /var/omr/data/outputs/<institution_id>/<session_id>/
+  - <uuid>_original.jpg  (copia de la imagen original)
+  - <uuid>_marked.jpg    (imagen con marcadores detectados)
+  - <session_id>.txt     (resultados TXT)
+- Ambos contenedores (API fase2 y Portal fase3) montan el mismo path
+- Acceso web para soporte via /data en el API
+
+Pasos a implementar:
+1. Bind mount /var/omr/data en docker-compose.prod.yml de fase2
+2. Montar /var/omr/data como static files en main.py de fase2
+3. Script cleanup + cron para retencion 30 dias
+4. Vista en portal fase3 para que clientes vean imagenes por sesion
+
+Pendiente:
+- Ejecutar sudo mkdir -p /var/omr/data en el VPS
+- Actualizar .env del portal con DATA_DIR si es necesario
+- Probar que ambos contenedores vean los mismos archivos

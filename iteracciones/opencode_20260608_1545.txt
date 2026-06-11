@@ -1,0 +1,15 @@
+=== Sesion: 2026-06-08 15:45 ===
+Resumen:
+- Se revirtieron todos los cambios del portal en omr-pwa-fase2 (ClientUser, router, templates, HTML, requirements extras). master/main queda limpio.
+- Se agrego outputs/* a .gitignore y se removieron los archivos de outputs del tracking de git.
+- Se hizo commit y push a main de omr-pwa-fase2.
+- Se creo el proyecto omr-pwa-fase3-portal desde cero con estructura completa:
+  - main.py (FastAPI entry point)
+  - app/config.py, database.py, auth.py, models.py, models_db.py
+  - app/routes/portal.py (login, dashboard, QR, demo, descarga)
+  - app/templates/portal/ (login.html, dashboard.html, demo.html)
+  - requirements.txt, .env.example, docs/especificaciones.md
+- Se creo el repo norbertoochoa-web/omr-pwa-fase3-portal en GitHub y se hizo push del commit inicial.
+- Se autentico gh CLI con el token fine-grained del usuario.
+- Token de backup guardado temporalmente y luego eliminado con shred.
+- Pendiente: implementar seed de client_users, probar login local, y desplegar en VPS.
