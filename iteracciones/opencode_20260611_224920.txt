@@ -1,0 +1,45 @@
+# Resumen Sesión 11/06/2026 22:49
+
+## Objetivo
+Implementar y desplegar:
+1. Borde blanco fijo en rectángulo de cámara
+2. Texto guía dinámico 3 estados (Sube/Baja el celular, Mantén quieto, ¡Listo!)
+3. Auto-capture al encajar cartilla
+4. Portal: mostrar _original.jpg aunque no exista _marked.jpg
+
+## Cambios Implementados
+
+### camera.js — refactor para guía dinámica
+- `detectCorners()` ahora retorna objeto `{ detected, reason, offsetY }` en vez de boolean
+- `checkCalibration()` retorna `{ calibrated, guidance }` donde guidance: `alinear`, `subir`, `bajar`, `quieto`, `listo`
+- `startCalibration()` acepta nuevo callback `onFrame` que se ejecuta cada frame con estado detallado
+
+### Camera.js — UI + auto-capture
+- Borde del rectángulo: `border-overlay-red overlay-transition` → `border-white`
+- Eliminado `overlayBorder` y los 4 swaps de clase red/green
+- Agregado `<div id="guidance-text">` debajo del rectángulo para texto guía
+- Callback `onCalibrationChange` ahora recibe objeto `{ calibrated, guidance }`
+- Callback `onFrame` actualiza texto guía cada frame
+- Auto-capture: cuando `calibrated=true`, espera 3s de cooldown y dispara `captureBtn.click()`
+- Flag `isProcessing` para evitar capturas concurrentes
+
+### style.css + tailwind.config.js
+- Eliminado `.overlay-transition { transition: border-color 0.3s ease, ... }`
+- Eliminados colores `overlay: { red, green, yellow }`
+
+### portal.py — mostrar originales sin marked
+- Ahora itera tanto `_marked.jpg` como `_original.jpg`
+- Si un `_original.jpg` no tiene `_marked.jpg` correspondiente, se muestra igual en galería
+
+## Problema Encontrado y Solucionado
+- VPS tenía rama `master` en vez de `main` → `git pull` no traía los commits nuevos
+- Solución: `git checkout main && git pull origin main && npm install && npm run build`
+
+## Despliegue en VPS
+- PWA: `Camera-BR7pMWUd.js` (94KB) con nuevo código verificado
+  - `border-white` (5 matches), `guidance` (4), `subir` (2), `bajar` (2), `quieto` (3), `listo` (2), `alinear` (2)
+- Portal: rebuild con `docker compose up -d --build`
+- Ambos servicios respondiendo 200 OK
+
+## Pendientes
+- Usuario probará en celular (service worker puede necesitar refrescar / cerrar app)
