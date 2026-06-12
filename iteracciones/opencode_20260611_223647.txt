@@ -1,0 +1,39 @@
+# Resumen Sesión 11/06/2026 22:36
+
+## Objetivo
+Respaldar estado actual en GitHub antes de implementar:
+1. Borde blanco fijo en rectángulo de cámara (sin rojo/verde)
+2. Texto guía dinámico 3 estados (Sube/Baja el celular, Mantén quieto, ¡Listo!)
+3. Auto-capture al encajar cartilla
+4. Portal: mostrar _original.jpg aunque no exista _marked.jpg
+
+## Estado Actual (Pre-implementación)
+- Fase1 (PWA mobile): commit 36d2b18 - todos los cambios commiteados
+- Fase2 (API): commit c280409 - un archivo untracked (iteracciones/)
+- Portal: commit 74184f5 - limpio
+- Todos los remotes up-to-date
+
+## Lo que funcionó esta sesión
+- Se redujo rectángulo cámara 15%
+- Mejora detección de encaje (≥70% cobertura, ±10% centrado)
+- Multi-marcas → ERROR en DB, "E" en TXT
+- Portal muestra galería de imágenes por sesión
+- Data persistente en /var/omr/data/outputs/
+
+## Problemas Detectados
+1. Borde rojo/verde del rectángulo nunca cambió (siempre verde) - por eso se eliminará
+2. Portal no muestra imágenes en sesiones existentes porque solo itera _marked.jpg
+   - Las imágenes subidas a mano tienen solo _original.jpg
+
+## Pendientes
+- [ ] Implementar borde blanco + guía + auto-capture en Camera.js / camera.js
+- [ ] Mostrar originales sin marked en portal.py
+- [ ] Limpiar overlay-transition de CSS y overlay colors de tailwind
+- [ ] Desplegar en VPS
+
+## Archivos a modificar
+- frontend/src/screens/Camera.js
+- frontend/src/core/camera.js
+- frontend/src/style.css
+- frontend/tailwind.config.js
+- app/routes/portal.py

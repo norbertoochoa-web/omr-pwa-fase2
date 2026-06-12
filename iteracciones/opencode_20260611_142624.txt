@@ -1,0 +1,96 @@
+Iteraccion: 2026-06-11 14:26
+Asunto: RESUMEN ESTADO PROYECTO OMR PWA
+
+================================================
+SERVICIOS EN VPS (162.35.161.249)
+================================================
+
+Caddy (proxy reverso) -> servicio sistema
+  - Puerto 80/443, config en /etc/caddy/Caddyfile
+
+API Backend (omr-pwa-fase2) -> Docker, puerto 8000
+  - Compose: /home/opencode/omr-pwa-fase2/docker-compose.prod.yml
+  - FastAPI + PostgreSQL 16 + OpenCV
+  - Endpoints: /api/v1/{auth,upload,sessions,download,templates,health}
+  - Swagger: http://162.35.161.249:8000/docs
+
+Portal Clientes (omr-pwa-fase3-portal) -> Docker, puerto 8001
+  - Compose: /home/opencode/omr-pwa-fase3-portal/docker-compose.yml
+  - FastAPI + Jinja2 + Tailwind
+  - Login: http://162.35.161.249:8001/portal/login
+  - Credenciales: admin@catolico.cl / qwerty1
+
+PWA Frontend (omr-pwa-mobile) -> Static files servidas por Caddy
+  - Build en /home/opencode/omr-pwa-mobile/frontend/dist/
+  - Desplegado en /var/www/imax-pwa/
+  - Vite + Vanilla JS + Service Worker
+
+================================================
+DATOS PERSISTENTES
+================================================
+
+- PostgreSQL: volumen Docker pgdata
+- Uploads temporales: volumen Docker uploads_data
+- Outputs procesados: /var/omr/data/outputs/
+  - /var/omr/data/outputs/<institution>/<session>/
+  - Archivos: <img_id>_original.jpg, <img_id>_marked.jpg, <session>.txt
+  - Acceso web via API: http://IP:8000/data/outputs/...
+  - Limpieza automatica: cron 0 3 * * * (30 dias) via /home/opencode/cleanup-omr-data.sh
+
+================================================
+CAMBIO RECIENTE: PERSISTENCIA OUTPUTS
+================================================
+
+- Se movio OUTPUTS_DIR de "outputs" (relativo, dentro del contenedor) a
+  /var/omr/data/outputs/ (bind mount compartido entre API y Portal)
+- DATA_DIR configurado en app/config.py con valor "/var/omr/data"
+- Portal monta /data como static files (main.py)
+- Portal actualizado: session detail route, galeria de imagenes
+- El directorio /var/omr/data/ fue creado en el VPS
+
+PENDIENTE: Las imagenes viejas en uploads_data no se migraron automaticamente.
+Solo las ultimas 3 (sesion 11/06) se copiaron manualmente a /var/omr/data/outputs/.
+
+================================================
+CAMBIO RECIENTE: RECTANGULO CAMARA
+================================================
+
+Archivos: omr-pwa-mobile/frontend/src/
+- screens/Camera.js linea 52: tamano rectangulo reducido 15%
+  (de 380x680 a 323x578)
+- core/camera.js detectCorners(): Mejorado para validar que la cartilla
+  llene >=70% del ROI y este centrada (±10%), no solo puntos oscuros
+  en esquinas
+- core/camera.js checkCalibration(): Ahora USA hasCorners en la condicion
+  de retorno (antes se calculaba pero se ignoraba)
+
+================================================
+CAMBIO RECIENTE: MULTI-MARCA = ERROR
+================================================
+
+Archivos: omr-pwa-fase2/app/
+- omr_engine/evaluation.py: Multi-marca ahora da veredicto "ERROR"
+  (antes "Incorrect")
+- services/omr_service.py: Respuestas con len > 1 se almacenan como "ERROR"
+- services/txt_service.py: En TXT se escribe "E" para ERROR
+
+================================================
+MANUAL DE OPERACION
+================================================
+
+manual_2026_11.txt en iteracciones/ contiene:
+- Levantar/detener servicios
+- Ver logs
+- Rebuild tras actualizar codigo
+- Datos persistentes
+- Acceso a imagenes via web
+
+================================================
+OBSERVACIONES
+================================================
+
+- fase1: No usa Docker, se build con "cd frontend && npm run build"
+  y se copia a /var/www/imax-pwa/
+- fase2 y portal: Se rebuild con "docker compose up -d --build"
+- Usuario VPS: opencode / qwerty1
+- Todos los cambios se commitean a GitHub automaticamente
