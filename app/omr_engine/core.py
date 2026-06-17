@@ -144,13 +144,21 @@ class ImageInstanceOps:
             try:
                 all_p = np.array(all_q_vals)
                 p90 = np.percentile(all_p, 90)
+                mean_all = np.mean(all_p)
+                logger.info(f"Thresholding: p90={p90:.1f}, mean_all={mean_all:.1f}, global_thr={global_thr}")
                 if global_thr > p90:
                     _ret, full_otsu = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-                    capped = int(round(min(global_thr, float(full_otsu) + 10)))
+                    full_otsu = float(full_otsu)
+                    capped = int(round(min(global_thr, full_otsu + 10)))
                     if capped < global_thr:
                         logger.info(f"Thresholding: capped from {global_thr} to {capped} (full Otsu={full_otsu:.0f})")
                         global_thr = max(capped, 95)
-            except Exception:
+                    else:
+                        logger.info(f"Thresholding: no cap needed (full Otsu={full_otsu:.0f} >= global_thr)")
+                else:
+                    logger.info(f"Thresholding: no cap needed (p90 >= global_thr)")
+            except Exception as e:
+                logger.info(f"Thresholding: cap exception: {e}")
                 pass
 
             logger.info(
