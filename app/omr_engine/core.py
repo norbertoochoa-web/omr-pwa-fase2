@@ -127,7 +127,7 @@ class ImageInstanceOps:
 
             global_std_thresh, _, _ = self.get_global_threshold(all_q_std_vals)
             global_thr, _, _ = self.get_global_threshold(all_q_vals, looseness=4)
-            global_thr = max(global_thr, 165)
+            global_thr = max(global_thr, 100)
 
             logger.info(
                 f"Thresholding: global_thr: {round(global_thr, 2)} global_std_THR: {round(global_std_thresh, 2)}"
