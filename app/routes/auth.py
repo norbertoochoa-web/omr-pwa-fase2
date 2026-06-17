@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,6 +8,8 @@ from app.database import get_db
 from app.models import User
 from app.schemas.auth import LoginRequest, LoginResponse, SSORequest, SubscriptionObject
 from app.services.auth_service import authenticate_user, create_token, decode_token
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -44,7 +48,9 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
 @router.post("/auth/sso", response_model=LoginResponse)
 async def sso_login(request: SSORequest, db: AsyncSession = Depends(get_db)):
     payload = decode_token(request.token)
-    if not payload or payload.get("type") != "qr_access":
+    token_type = payload.get("type") if payload else None
+    if not payload or token_type not in ("qr_access", "pwa_sso"):
+        logger.warning("SSO token inválido: type=%s payload=%s", token_type, payload)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Token inválido",
