@@ -138,6 +138,21 @@ class ImageInstanceOps:
             blended = 0.6 * float(thr_gap) + 0.4 * float(thr_otsu)
             global_thr = int(max(95, min(210, round(blended))))
 
+            # Safety cap: if blended threshold would mark nearly all bubbles
+            # (threshold above 90th percentile), compute Otsu on full image
+            # and use it as an upper bound to avoid false positives on dark images.
+            try:
+                all_p = np.array(all_q_vals)
+                p90 = np.percentile(all_p, 90)
+                if global_thr > p90:
+                    _ret, full_otsu = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                    capped = int(round(min(global_thr, float(full_otsu) + 10)))
+                    if capped < global_thr:
+                        logger.info(f"Thresholding: capped from {global_thr} to {capped} (full Otsu={full_otsu:.0f})")
+                        global_thr = max(capped, 95)
+            except Exception:
+                pass
+
             logger.info(
                 f"Thresholding: global_thr: {round(global_thr, 2)} (gap={round(thr_gap,2)}, otsu={round(thr_otsu,2)}) global_std_THR: {round(global_std_thresh, 2)}"
             )
