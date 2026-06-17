@@ -138,25 +138,20 @@ class ImageInstanceOps:
             blended = 0.6 * float(thr_gap) + 0.4 * float(thr_otsu)
             global_thr = int(max(95, min(210, round(blended))))
 
-            # Safety cap: if blended threshold would mark nearly all bubbles
-            # (threshold above 90th percentile), compute Otsu on full image
-            # and use it as an upper bound to avoid false positives on dark images.
+            # Safety cap: if blended threshold would mark >85% of all bubbles
+            # (too high for the actual image), clamp it to a reasonable value
+            # based on the bubble-value distribution.
             try:
                 all_p = np.array(all_q_vals)
-                p90 = np.percentile(all_p, 90)
-                mean_all = np.mean(all_p)
-                logger.info(f"Thresholding: p90={p90:.1f}, mean_all={mean_all:.1f}, global_thr={global_thr}")
-                if global_thr > p90:
-                    _ret, full_otsu = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-                    full_otsu = float(full_otsu)
-                    capped = int(round(min(global_thr, full_otsu + 10)))
+                marked_ratio = np.mean((all_p < global_thr).astype(np.float32))
+                if marked_ratio > 0.85:
+                    capped = int(round(np.percentile(all_p, 85) + 15))
                     if capped < global_thr:
-                        logger.info(f"Thresholding: capped from {global_thr} to {capped} (full Otsu={full_otsu:.0f})")
+                        logger.info(
+                            f"Thresholding: capped from {global_thr} to {capped} "
+                            f"(marked_ratio={marked_ratio:.2f}, p85={np.percentile(all_p,85):.0f})"
+                        )
                         global_thr = max(capped, 95)
-                    else:
-                        logger.info(f"Thresholding: no cap needed (full Otsu={full_otsu:.0f} >= global_thr)")
-                else:
-                    logger.info(f"Thresholding: no cap needed (p90 >= global_thr)")
             except Exception as e:
                 logger.info(f"Thresholding: cap exception: {e}")
                 pass

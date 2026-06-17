@@ -36,7 +36,7 @@ class ImageUtils:
 
     @staticmethod
     def normalize_util(img, alpha=0, beta=255):
-        return cv2.normalize(img, alpha, beta, norm_type=cv2.NORM_MINMAX)
+        return cv2.normalize(img, None, alpha, beta, norm_type=cv2.NORM_MINMAX)
 
     @staticmethod
     def auto_canny(image, sigma=0.93):
