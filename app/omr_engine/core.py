@@ -126,11 +126,20 @@ class ImageInstanceOps:
                     total_q_strip_no += 1
 
             global_std_thresh, _, _ = self.get_global_threshold(all_q_std_vals)
-            global_thr, _, _ = self.get_global_threshold(all_q_vals, looseness=4)
-            global_thr = max(global_thr, 100)
+            thr_gap, _, _ = self.get_global_threshold(all_q_vals, looseness=4)
+            # Blend gap-based threshold with Otsu to stabilize across lighting conditions
+            try:
+                vals = np.clip(np.array(all_q_vals, dtype=np.float32), 0, 255).astype(np.uint8).reshape(-1, 1)
+                _ret, thr_otsu = cv2.threshold(vals, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                thr_otsu = float(thr_otsu)
+            except Exception:
+                thr_otsu = float(thr_gap)
+
+            blended = 0.6 * float(thr_gap) + 0.4 * float(thr_otsu)
+            global_thr = int(max(95, min(210, round(blended))))
 
             logger.info(
-                f"Thresholding: global_thr: {round(global_thr, 2)} global_std_THR: {round(global_std_thresh, 2)}"
+                f"Thresholding: global_thr: {round(global_thr, 2)} (gap={round(thr_gap,2)}, otsu={round(thr_otsu,2)}) global_std_THR: {round(global_std_thresh, 2)}"
             )
 
             per_omr_threshold_avg, total_q_box_no = 0, 0
