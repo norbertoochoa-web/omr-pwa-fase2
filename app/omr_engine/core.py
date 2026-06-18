@@ -136,7 +136,7 @@ class ImageInstanceOps:
                 thr_otsu = float(thr_gap)
 
             blended = 0.6 * float(thr_gap) + 0.4 * float(thr_otsu)
-            global_thr = int(max(95, min(210, round(blended))))
+            global_thr = int(max(85, min(210, round(blended))))
 
             # Safety cap: if the blended threshold marks most bubbles (>85%),
             # the gap-based + Otsu both defaulted (no clear bimodal distribution).
@@ -145,7 +145,7 @@ class ImageInstanceOps:
                 all_p = np.array(all_q_vals)
                 marked_ratio = np.mean((all_p < global_thr).astype(np.float32))
                 if marked_ratio > 0.85:
-                    capped = max(95, int(round(np.percentile(all_p, 85) + 15)))
+                    capped = max(85, int(round(np.percentile(all_p, 85) + 15)))
                     if capped < global_thr:
                         logger.info(f"Thresholding: capped {global_thr} -> {capped}")
                         global_thr = capped

@@ -19,7 +19,7 @@ CONFIG_DEFAULTS = DotMap(
         "alignment_params": {
             "auto_align": False,
             "match_col": 5,
-            "max_steps": 20,
+            "max_steps": 30,
             "stride": 1,
             "thickness": 3,
         },
