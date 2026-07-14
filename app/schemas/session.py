@@ -27,3 +27,4 @@ class FinishSessionResponse(BaseModel):
     status: str
     emailed: bool
     txt_filename: str
+    qccapdat_filename: str | None = None

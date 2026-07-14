@@ -9,7 +9,7 @@ from app.schemas.session import CreateSessionRequest, CreateSessionResponse, Ses
 from app.routes.dependencies import get_current_user
 from app.services.session_service import create_session, get_user_sessions, get_session, finish_session
 from app.services.email_service import send_session_email
-from app.services.txt_service import generate_delphi_txt, save_txt_to_file
+from app.services.txt_service import generate_delphi_txt, save_txt_to_file, generate_qccapdat_txt, save_qccapdat_to_file
 from app.config import settings
 
 router = APIRouter()
@@ -94,12 +94,16 @@ async def finish_session_endpoint(
 
     await finish_session(db, uuid.UUID(session_id))
 
-    txt_content = generate_delphi_txt(session_obj)
     inst_dir = session_obj.institution_id or "default"
     session_dir = os.path.join(settings.OUTPUTS_DIR, inst_dir, session_id)
     os.makedirs(session_dir, exist_ok=True)
+
+    txt_content = generate_delphi_txt(session_obj)
     txt_path = save_txt_to_file(txt_content, session_dir, str(session_obj.id))
     session_obj.result_txt_path = txt_path
+
+    qccapdat_content = generate_qccapdat_txt(session_obj)
+    qccapdat_path = save_qccapdat_to_file(qccapdat_content, session_dir, str(session_obj.id))
 
     emailed = False
     result = await db.execute(select(User).where(User.id == session_obj.user_id))
@@ -113,4 +117,5 @@ async def finish_session_endpoint(
         status="COMPLETED",
         emailed=emailed,
         txt_filename=f"{session_obj.id}.txt",
+        qccapdat_filename=os.path.basename(qccapdat_path),
     )
